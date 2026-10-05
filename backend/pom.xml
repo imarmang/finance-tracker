@@ -30,7 +30,18 @@
 		<java.version>21</java.version>
 	</properties>
 	<dependencies>
-		<dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <!--runtime means the driver isn't needed to compile your code, only to run it.
+            You never import it in Java, since Spring uses it behind the scenes.-->
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
