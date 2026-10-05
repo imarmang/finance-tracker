@@ -1,0 +1,151 @@
+@let s = store.summary();
+
+@if (!s.any) {
+  <div class="grid">
+    <div class="card empty">
+      <h3>Nothing in {{ monthLabel(s.key) }} yet</h3>
+      <p>Add your first paycheck or expense and this page fills in automatically.</p>
+      <button class="btn primary" type="button" (click)="store.openDrawer()">
+        + Add transaction
+      </button>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Year at a glance</h2>
+          <p class="sub">Click a month to jump to it.</p>
+        </div>
+      </div>
+      <app-year-chart />
+    </div>
+  </div>
+} @else {
+  <div class="grid">
+    <div class="card">
+      <div class="hero">
+        <div>
+          <div class="label">
+            {{ hero().inProgress ? 'Left over so far in ' : 'Left over in '
+            }}{{ monthLabel(s.key) }}
+          </div>
+          <div class="big num" [class.neg]="hero().neg">{{ money(s.profit) }}</div>
+          <div class="hero-row">
+            @if (hero().rate !== null) {
+              <span class="pill" [class.neg]="hero().neg"
+                >{{ hero().neg ? '▼ ' : '▲ ' }}{{ hero().rate }}% savings rate</span
+              >
+            }
+            @if (hero().inProgress) {
+              <span class="faint">Month in progress · through {{ shortDate(TODAY) }}</span>
+            }
+          </div>
+          <div class="split">
+            <div class="bar" aria-hidden="true">
+              <span [style.width.%]="hero().spentPct" style="background: var(--s2)"></span>
+              <span style="flex: 1; background: var(--s1); opacity: 0.35"></span>
+            </div>
+            <div class="lg">
+              <span
+                ><i class="dot" style="background: var(--s2)"></i>Spent {{ money0(s.spent) }}</span
+              >
+              <span
+                ><i class="dot" style="background: var(--s1); opacity: 0.5"></i>Kept
+                {{ money0(hero().kept) }}</span
+              >
+            </div>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <div class="k">Take-home income</div>
+            <div class="v">{{ money0(s.net) }}</div>
+            <div class="d">{{ money0(s.tax) }} in taxes</div>
+          </div>
+          <div class="stat">
+            <div class="k">Spent</div>
+            <div class="v">{{ money0(s.spent) }}</div>
+            <div class="d">of {{ money0(hero().totalBudget) }} budgeted</div>
+          </div>
+          <div class="stat">
+            <div class="k">Rewards earned</div>
+            <div class="v">{{ points(s.pts) }} pts</div>
+            <div class="d">worth {{ money(s.value) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (s.spent > 0) {
+      <div class="grid cols2">
+        <app-category-donut [summary]="s" />
+        <app-weekly-chart [summary]="s" />
+      </div>
+    }
+
+    <div class="grid cols">
+      <div class="grid">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Budget vs. spent</h2>
+              <p class="sub">The bar is your monthly budget. It fills as you spend.</p>
+            </div>
+            <button class="link" type="button" (click)="go('budget')">Edit budget</button>
+          </div>
+          <app-budget-bars [rows]="budget().rows" />
+          @if (budget().total > 9) {
+            <p class="hint" style="margin-top: 10px">
+              <button class="link" type="button" (click)="go('budget')">
+                See all {{ budget().total }} categories
+              </button>
+            </p>
+          }
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <div><h2>Latest activity</h2></div>
+            <button class="link" type="button" (click)="go('transactions')">
+              View all {{ s.expenses.length + s.income.length }}
+            </button>
+          </div>
+          @for (t of recent(); track t.kind + t.id) {
+            <app-tx-row [tx]="t" />
+          }
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Bills not paid yet</h2>
+          <p class="sub">
+            @if (billsDue().length) {
+              {{ billsDue().length }} fixed bills with no payment recorded in
+              {{ monthLabel(s.key) }}.
+            } @else {
+              Every fixed bill has a payment recorded.
+            }
+          </p>
+          <div class="todo">
+            @for (c of billsDue(); track c.name) {
+              <div>
+                <span>{{ c.name }}</span>
+                <span class="mono">{{ money(store.budgetForMonth()[c.name]) }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Year at a glance</h2>
+          <p class="sub">{{ rangeLabel }}. Click a month to jump to it.</p>
+        </div>
+      </div>
+      <app-year-chart />
+    </div>
+  </div>
+}
