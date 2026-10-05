@@ -1,0 +1,68 @@
+@let f = store.filters();
+@let s = store.summary();
+
+<div class="card">
+  <div class="filters">
+    <input
+      type="search"
+      placeholder="Search vendor or note"
+      aria-label="Search"
+      [value]="f.q"
+      (input)="store.setFilters({ q: textOf($event) })"
+    />
+
+    <div class="seg" role="group" aria-label="Type">
+      @for (t of typeOptions; track t.value) {
+        <button
+          type="button"
+          [attr.aria-pressed]="f.type === t.value"
+          (click)="store.setFilters({ type: t.value })"
+        >
+          {{ t.label }}
+        </button>
+      }
+    </div>
+
+    <select aria-label="Category" (change)="store.setFilters({ cat: textOf($event) })">
+      <option value="">All categories</option>
+      @for (c of store.categories; track c.name) {
+        <option [value]="c.name" [selected]="f.cat === c.name">{{ c.name }}</option>
+      }
+    </select>
+
+    <select aria-label="Card" (change)="store.setFilters({ card: textOf($event) })">
+      <option value="">All cards</option>
+      @for (c of store.cards(); track c.name) {
+        <option [value]="c.name" [selected]="f.card === c.name">{{ c.name }}</option>
+      }
+    </select>
+  </div>
+
+  @if (list().length) {
+    <div class="txhead">
+      <span>Date</span><span>Description</span><span>Paid with</span><span>Points</span
+      ><span>Amount</span>
+    </div>
+    @for (t of list(); track t.kind + t.id) {
+      <app-tx-row [tx]="t" />
+    }
+    <div class="tx-foot">
+      <span>{{ list().length }} transactions</span>
+      <span class="mono">{{ footer() }}</span>
+    </div>
+  } @else {
+    <div class="empty">
+      <h3>{{ s.any ? 'No matches' : 'No transactions in ' + monthLabel(s.key) }}</h3>
+      <p>
+        {{
+          s.any ? 'Try clearing a filter or the search box.' : 'Add one and it will show up here.'
+        }}
+      </p>
+      @if (!s.any) {
+        <button class="btn primary" type="button" (click)="store.openDrawer()">
+          + Add transaction
+        </button>
+      }
+    </div>
+  }
+</div>

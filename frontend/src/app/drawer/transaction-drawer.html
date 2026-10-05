@@ -1,0 +1,326 @@
+<div id="scrim" [class.open]="open()" (click)="store.closeDrawer()"></div>
+
+<aside id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle" [class.open]="open()">
+  <div class="dhead">
+    <h2 id="dTitle">{{ title() }}</h2>
+    <button class="xbtn" type="button" aria-label="Close" (click)="store.closeDrawer()">×</button>
+  </div>
+
+  <div class="dtype">
+    <div class="seg" role="group" aria-label="Type">
+      <button
+        type="button"
+        [attr.aria-pressed]="type() === 'expense'"
+        [disabled]="editing() && type() !== 'expense'"
+        (click)="setType('expense')"
+      >
+        Expense
+      </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="type() === 'income'"
+        [disabled]="editing() && type() !== 'income'"
+        (click)="setType('income')"
+      >
+        Income
+      </button>
+    </div>
+  </div>
+
+  @if (type() === 'expense') {
+    <form id="dForm" [formGroup]="expenseForm" (ngSubmit)="save(false)" novalidate>
+      <div id="dFields">
+        <div class="field amount">
+          <label for="fAmount">Amount</label>
+          <div class="money-in">
+            <span>$</span>
+            <input
+              id="fAmount"
+              formControlName="amount"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+              [attr.aria-invalid]="invalid(expenseForm.controls.amount) || null"
+            />
+          </div>
+          @if (invalid(expenseForm.controls.amount)) {
+            <p class="err">Enter an amount greater than zero.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="fVendor">Where did you spend it?</label>
+          <input
+            id="fVendor"
+            formControlName="vendor"
+            list="vendors"
+            autocomplete="off"
+            placeholder="Vendor, for example Target"
+            [attr.aria-invalid]="invalid(expenseForm.controls.vendor) || null"
+          />
+          <datalist id="vendors">
+            @for (v of store.vendors(); track v) {
+              <option [value]="v"></option>
+            }
+          </datalist>
+          @if (vendorHint(); as hint) {
+            <p class="hint">{{ hint }}</p>
+          }
+          @if (invalid(expenseForm.controls.vendor)) {
+            <p class="err">Enter where you spent it.</p>
+          }
+        </div>
+
+        <fieldset class="field">
+          <legend>Category</legend>
+          <div class="chips">
+            @for (c of variable; track c.name) {
+              <label class="chip">
+                <input type="radio" formControlName="category" [value]="c.name" />
+                <span>{{ c.name }}</span>
+              </label>
+            }
+          </div>
+          <details [open]="billSelected()">
+            <summary>Bills and fixed costs</summary>
+            <div class="chips">
+              @for (c of bills; track c.name) {
+                <label class="chip">
+                  <input type="radio" formControlName="category" [value]="c.name" />
+                  <span>{{ c.name }}</span>
+                </label>
+              }
+            </div>
+          </details>
+          @if (invalid(expenseForm.controls.category)) {
+            <p class="err">Pick a category.</p>
+          }
+        </fieldset>
+
+        <div class="field">
+          <label for="fDate">Date</label>
+          <div class="date-row">
+            <input id="fDate" type="date" formControlName="date" />
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="expenseForm.controls.date.setValue(TODAY)"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="expenseForm.controls.date.setValue(YESTERDAY)"
+            >
+              Yesterday
+            </button>
+          </div>
+          @if (invalid(expenseForm.controls.date)) {
+            <p class="err">Choose a date.</p>
+          }
+        </div>
+
+        <fieldset class="field">
+          <legend>Paid with</legend>
+          <div class="chips">
+            @for (c of store.cards(); track c.name) {
+              <label class="chip">
+                <input type="radio" formControlName="card" [value]="c.name" />
+                <span>{{ c.name }}</span>
+              </label>
+            }
+          </div>
+          @if (invalid(expenseForm.controls.card)) {
+            <p class="err">Pick how you paid.</p>
+          }
+        </fieldset>
+
+        <p class="points" aria-live="polite">{{ preview() }}</p>
+
+        <details class="more">
+          <summary>Adjust points or add a note</summary>
+          <div class="row2">
+            <div class="field">
+              <label for="fMult">Points multiplier</label>
+              <input
+                id="fMult"
+                type="number"
+                step="0.5"
+                min="0"
+                formControlName="mult"
+                (input)="markMultTouched()"
+              />
+            </div>
+          </div>
+          <div class="field" style="margin-top: 12px">
+            <label for="fNote">Note</label>
+            <input id="fNote" formControlName="note" placeholder="Optional" />
+          </div>
+        </details>
+      </div>
+
+      <div class="dfoot" id="dFoot">
+        <div class="grow">
+          <button type="submit" class="btn primary">
+            {{ editing() ? 'Save changes' : 'Save expense' }}
+          </button>
+          @if (!editing()) {
+            <button type="button" class="btn" (click)="save(true)">Save &amp; add another</button>
+          }
+        </div>
+        @if (editing()) {
+          <button type="button" class="btn danger" (click)="deleteEntry()">
+            {{ deleteArmed() ? 'Click again to delete' : 'Delete' }}
+          </button>
+        }
+        <button type="button" class="btn ghost" (click)="store.closeDrawer()">Cancel</button>
+      </div>
+    </form>
+  } @else {
+    <form id="dForm" [formGroup]="incomeForm" (ngSubmit)="save(false)" novalidate>
+      <div id="dFields">
+        <fieldset class="field">
+          <legend>Where did it come from?</legend>
+          <div class="chips">
+            @for (s of sources; track s) {
+              <label class="chip">
+                <input type="radio" formControlName="source" [value]="s" />
+                <span>{{ s }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <div class="field amount">
+          <label for="fGross">{{
+            isPaycheck() ? 'Gross pay (before taxes)' : 'Amount received'
+          }}</label>
+          <div class="money-in">
+            <span>$</span>
+            <input
+              id="fGross"
+              formControlName="gross"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+              [attr.aria-invalid]="invalid(incomeForm.controls.gross) || null"
+            />
+          </div>
+          @if (invalid(incomeForm.controls.gross)) {
+            <p class="err">Enter an amount greater than zero.</p>
+          }
+        </div>
+
+        <details [open]="isPaycheck()">
+          <summary>Taxes withheld</summary>
+          <div class="row2">
+            <div class="field">
+              <label for="fFed">Federal tax</label
+              ><input
+                id="fFed"
+                type="number"
+                step="0.01"
+                min="0"
+                formControlName="fed"
+                placeholder="0.00"
+              />
+            </div>
+            <div class="field">
+              <label for="fSS">Social Security</label
+              ><input
+                id="fSS"
+                type="number"
+                step="0.01"
+                min="0"
+                formControlName="ss"
+                placeholder="0.00"
+              />
+            </div>
+            <div class="field">
+              <label for="fMed">Medicare</label
+              ><input
+                id="fMed"
+                type="number"
+                step="0.01"
+                min="0"
+                formControlName="medicare"
+                placeholder="0.00"
+              />
+            </div>
+            <div class="field">
+              <label for="fState">CA income tax</label
+              ><input
+                id="fState"
+                type="number"
+                step="0.01"
+                min="0"
+                formControlName="stateTax"
+                placeholder="0.00"
+              />
+            </div>
+            <div class="field">
+              <label for="fSDI">CA SDI</label
+              ><input
+                id="fSDI"
+                type="number"
+                step="0.01"
+                min="0"
+                formControlName="sdi"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+        </details>
+        @if (taxesTooHigh()) {
+          <p class="err">Taxes are larger than the amount received.</p>
+        }
+
+        <div class="netline" aria-live="polite">
+          <span>Take-home</span>
+          <span class="mono">{{ takeHome() }}</span>
+        </div>
+
+        <div class="field">
+          <label for="fIncDate">Date</label>
+          <div class="date-row">
+            <input id="fIncDate" type="date" formControlName="date" />
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="incomeForm.controls.date.setValue(TODAY)"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="incomeForm.controls.date.setValue(YESTERDAY)"
+            >
+              Yesterday
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fIncNote">Note</label>
+          <input id="fIncNote" formControlName="note" placeholder="Optional" />
+        </div>
+      </div>
+
+      <div class="dfoot" id="dFoot">
+        <div class="grow">
+          <button type="submit" class="btn primary">
+            {{ editing() ? 'Save changes' : 'Save income' }}
+          </button>
+        </div>
+        @if (editing()) {
+          <button type="button" class="btn danger" (click)="deleteEntry()">
+            {{ deleteArmed() ? 'Click again to delete' : 'Delete' }}
+          </button>
+        }
+        <button type="button" class="btn ghost" (click)="store.closeDrawer()">Cancel</button>
+      </div>
+    </form>
+  }
+</aside>
