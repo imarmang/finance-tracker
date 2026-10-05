@@ -70,7 +70,7 @@ The PostgreSQL database runs in Docker. Its settings are read from a `.env` file
 
    ```bash
    docker compose ps
-   docker exec -it finance-postgres psql -U finance_user -d finance -c "\l"
+   docker exec -it finance-postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\l"'
    ```
 
 The database listens on `localhost:5432`. Stop it with `docker compose down`. Data is kept in the Docker volume `finance-pgdata`, so it survives restarts.
@@ -82,6 +82,14 @@ The database listens on `localhost:5432`. Stop it with `docker compose down`. Da
 ## Getting Started
 
 ### Backend
+
+The backend reads its database settings from environment variables, not from `.env` directly. Start the database (see [Database Setup](#database-setup)) and load the variables into your shell from the project root before running any backend command:
+
+```bash
+set -a; source .env; set +a
+```
+
+On Windows (PowerShell), set `POSTGRES_USER` and `POSTGRES_PASSWORD` yourself, for example with `$env:POSTGRES_USER = "..."`.
 
 Run the application using the Maven Wrapper:
 
@@ -95,6 +103,14 @@ Run the test suite:
 ```bash
 ./mvnw test
 ```
+
+Check the database connection only (requires the database to be running):
+
+```bash
+./mvnw test -Dtest=DatabaseConnectionTest
+```
+
+A passing run logs `HikariPool-1 - Start completed` and `BUILD SUCCESS`. A failure usually means the database isn't running or the `POSTGRES_*` variables aren't loaded.
 
 Build a JAR:
 
