@@ -53,6 +53,10 @@ export class App {
 
   protected readonly monthLabel = monthLabel;
 
+  constructor() {
+    this.store.loadExpenses();
+  }
+
   protected go(path: string): void {
     this.router.navigateByUrl(`/${path}`);
   }

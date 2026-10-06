@@ -15,6 +15,11 @@ public class ExpenseService {
         this.repository = repository;
     }
 
+    /** Every expense, newest first. */
+    public List<Expense> findAll() {
+        return repository.findAll();
+    }
+
     /** Expenses dated in the given month, newest first (newest id first on the same day). */
     public List<Expense> findByMonth(YearMonth month) {
         return repository.findAll().stream()

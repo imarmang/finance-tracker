@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   CATEGORIES,
   Card,
@@ -13,10 +13,17 @@ import {
 } from './model';
 import { daysIn, MONTHS, pad, TODAY, TODAY_MONTH } from './format';
 import { multFor, summarize } from './finance';
+import { ExpenseApi } from './expense.api';
+import { ToastService } from './feedback.service';
 
-/** Holds every piece of app state. Data lives in memory only, so a page reload clears it. */
+/**
+ * Holds every piece of app state. Expenses are loaded from and saved to the backend;
+ * income, cards and budgets live in memory only, so a page reload clears them.
+ */
 @Injectable({ providedIn: 'root' })
 export class FinanceStore {
+  private readonly api = inject(ExpenseApi);
+  private readonly toast = inject(ToastService);
   private nextId = 1;
 
   readonly categories = CATEGORIES;
@@ -81,25 +88,38 @@ export class FinanceStore {
     this.drawer.set(null);
   }
 
-  saveExpense(input: ExpenseInput, id: number | null): Expense {
+  /** Fetches every expense from the backend. Shows a toast if the request fails. */
+  async loadExpenses(): Promise<void> {
+    try {
+      this.expenses.set(await this.api.list());
+    } catch {
+      this.toast.show('Could not load transactions. Check that the backend is running.');
+    }
+  }
+
+  async saveExpense(input: ExpenseInput, id: number | null): Promise<Expense> {
     if (id !== null) {
-      const updated: Expense = { ...input, id };
+      const updated = await this.api.update(id, input);
       this.expenses.update((list) => list.map((e) => (e.id === id ? updated : e)));
       return updated;
     }
-    const created: Expense = { ...input, id: this.nextId++ };
+    const created = await this.api.create(input);
     this.expenses.update((list) => [...list, created]);
     return created;
   }
 
-  removeExpense(id: number): Expense | undefined {
+  async removeExpense(id: number): Promise<Expense | undefined> {
     const removed = this.expenses().find((e) => e.id === id);
+    await this.api.remove(id);
     this.expenses.update((list) => list.filter((e) => e.id !== id));
     return removed;
   }
 
-  restoreExpense(expense: Expense): void {
-    this.expenses.update((list) => [...list, expense]);
+  /** Re-creates a deleted expense. The backend assigns it a new id. */
+  async restoreExpense(expense: Expense): Promise<void> {
+    const { id: _id, ...input } = expense;
+    const created = await this.api.create(input);
+    this.expenses.update((list) => [...list, created]);
   }
 
   saveIncome(input: IncomeInput, id: number | null): Income {
