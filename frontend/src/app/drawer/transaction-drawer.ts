@@ -18,7 +18,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FinanceStore } from '../core/finance.store';
 import { netOf } from '../core/finance';
-import { money, monthLabel, points, r2, TODAY, YESTERDAY } from '../core/format';
+import { money, monthLabel, points, r2, shortDate, TODAY, YESTERDAY } from '../core/format';
 import {
   CATEGORIES,
   DrawerState,
@@ -56,6 +56,7 @@ export class TransactionDrawer {
   protected readonly TODAY = TODAY;
   protected readonly YESTERDAY = YESTERDAY;
   protected readonly money = money;
+  protected readonly shortDate = shortDate;
 
   protected readonly open = computed(() => this.store.drawer() !== null);
   protected readonly type = computed<EntryType>(() => this.store.drawer()?.type ?? 'expense');
@@ -123,6 +124,12 @@ export class TransactionDrawer {
   });
 
   protected readonly isPaycheck = computed(() => this.incomeValue().source === 'Paycheck');
+
+  /** True when the entry being saved is dated after the last day of the month being viewed. */
+  protected readonly dateTooLate = computed(() => {
+    const date = this.type() === 'expense' ? this.expenseValue().date : this.incomeValue().date;
+    return !!date && date > this.store.maxDate();
+  });
 
   protected readonly taxes = computed(() => {
     const v = this.incomeValue();
@@ -274,7 +281,7 @@ export class TransactionDrawer {
 
   private async saveExpense(again: boolean): Promise<void> {
     const form = this.expenseForm;
-    if (form.invalid) {
+    if (form.invalid || this.dateTooLate()) {
       form.markAllAsTouched();
       return;
     }
@@ -329,7 +336,7 @@ export class TransactionDrawer {
 
   private saveIncome(): void {
     const form = this.incomeForm;
-    if (form.invalid || this.taxesTooHigh()) {
+    if (form.invalid || this.taxesTooHigh() || this.dateTooLate()) {
       form.markAllAsTouched();
       return;
     }

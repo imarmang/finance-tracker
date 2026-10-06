@@ -39,16 +39,23 @@ export interface WeekView {
   bars: WeekBar[];
 }
 
-/** Spending grouped into the month's weeks: days 1–7, 8–14, and so on. */
+/** Number of days before the 1st that belong to the Monday-to-Sunday week it starts in (0 when it is a Monday). */
+function leadingDays(key: string): number {
+  const [year, month] = key.split('-').map(Number);
+  return (new Date(year, month - 1, 1).getDay() + 6) % 7;
+}
+
+/** Spending grouped into the month's Monday-to-Sunday weeks. The first and last weeks may be partial. */
 export function weeklyView(s: MonthSummary): WeekView {
   const { W, H, pt, pb, pl, pr } = WEEK;
   const dim = daysIn(s.key);
-  const weeks = Math.ceil(dim / 7);
+  const lead = leadingDays(s.key);
+  const weeks = Math.ceil((dim + lead) / 7);
 
   const totals: number[] = Array.from({ length: weeks }, () => 0);
   for (const e of s.expenses) {
     const day = Number(e.date.slice(8));
-    totals[Math.min(Math.floor((day - 1) / 7), weeks - 1)] += e.amount;
+    totals[Math.min(Math.floor((day - 1 + lead) / 7), weeks - 1)] += e.amount;
   }
 
   const max = niceMax(Math.max(1, ...totals));
@@ -62,8 +69,8 @@ export function weeklyView(s: MonthSummary): WeekView {
     const cx = pl + step * i + step / 2;
     const h = (H - pt - pb) * (value / max);
     const y = H - pb - h;
-    const first = i * 7 + 1;
-    const last = Math.min(first + 6, dim);
+    const first = Math.max(1, i * 7 - lead + 1);
+    const last = Math.min(dim, (i + 1) * 7 - lead);
     const future = isCurrent && first > todayDay;
     return {
       index: i,

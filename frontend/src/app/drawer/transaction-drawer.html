@@ -101,7 +101,7 @@
         <div class="field">
           <label for="fDate">Date</label>
           <div class="date-row">
-            <input id="fDate" type="date" formControlName="date" />
+            <input id="fDate" type="date" formControlName="date" [max]="store.maxDate()" />
             <button
               type="button"
               class="chip-btn"
@@ -119,6 +119,9 @@
           </div>
           @if (invalid(expenseForm.controls.date)) {
             <p class="err">Choose a date.</p>
+          }
+          @if (dateTooLate()) {
+            <p class="err">Choose a date on or before {{ shortDate(store.maxDate()) }}.</p>
           }
         </div>
 
@@ -292,7 +295,7 @@
         <div class="field">
           <label for="fIncDate">Date</label>
           <div class="date-row">
-            <input id="fIncDate" type="date" formControlName="date" />
+            <input id="fIncDate" type="date" formControlName="date" [max]="store.maxDate()" />
             <button
               type="button"
               class="chip-btn"
@@ -309,6 +312,10 @@
             </button>
           </div>
         </div>
+
+        @if (dateTooLate()) {
+          <p class="err">Choose a date on or before {{ shortDate(store.maxDate()) }}.</p>
+        }
 
         <div class="field">
           <label for="fIncNote">Note</label>

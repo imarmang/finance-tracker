@@ -71,6 +71,12 @@ export class FinanceStore {
     return month === TODAY_MONTH ? TODAY : `${month}-${pad(daysIn(month))}`;
   }
 
+  /** Latest date a transaction can have: today, or the last day of the month being viewed if that is earlier. */
+  readonly maxDate = computed(() => {
+    const monthEnd = `${this.month()}-${pad(daysIn(this.month()))}`;
+    return monthEnd < TODAY ? monthEnd : TODAY;
+  });
+
   setMonth(key: string): void {
     this.month.set(key);
   }
@@ -202,6 +208,27 @@ export class FinanceStore {
     const free = this.categories.find((k) => card.rules[k.name] === undefined);
     if (!free) return;
     this.setCardRule(index, free.name, Math.max(card.def, 1) + 1);
+  }
+
+  /** Adds a card with no bonus categories. Returns false if the name is empty or already used. */
+  addCard(name: string, def: number): boolean {
+    const trimmed = name.trim();
+    if (!trimmed || this.cards().some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
+      return false;
+    }
+    this.cards.update((list) => [...list, { name: trimmed, def, rules: {} }]);
+    return true;
+  }
+
+  removeCard(index: number): Card {
+    const removed = this.cards()[index];
+    this.cards.update((list) => list.filter((_, i) => i !== index));
+    return removed;
+  }
+
+  /** Puts a removed card back at the position it had. */
+  restoreCard(index: number, card: Card): void {
+    this.cards.update((list) => [...list.slice(0, index), card, ...list.slice(index)]);
   }
 
   private updateCard(index: number, change: (card: Card) => Card): void {
