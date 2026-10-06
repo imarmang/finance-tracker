@@ -40,11 +40,12 @@
               inputmode="decimal"
               autocomplete="off"
               placeholder="0.00"
+              (input)="onAmountInput($event, expenseForm.controls.amount)"
               [attr.aria-invalid]="invalid(expenseForm.controls.amount) || null"
             />
           </div>
           @if (invalid(expenseForm.controls.amount)) {
-            <p class="err">Enter an amount greater than zero.</p>
+            <p class="err">Enter an amount more than $0.25.</p>
           }
         </div>
 
@@ -148,6 +149,7 @@
                 type="number"
                 step="0.5"
                 min="0"
+                class="no-spinner"
                 formControlName="mult"
                 (input)="markMultTouched()"
               />
@@ -204,11 +206,12 @@
               inputmode="decimal"
               autocomplete="off"
               placeholder="0.00"
+              (input)="onAmountInput($event, incomeForm.controls.gross)"
               [attr.aria-invalid]="invalid(incomeForm.controls.gross) || null"
             />
           </div>
           @if (invalid(incomeForm.controls.gross)) {
-            <p class="err">Enter an amount greater than zero.</p>
+            <p class="err">Enter an amount more than $0.25.</p>
           }
         </div>
 
@@ -221,6 +224,7 @@
                 id="fFed"
                 type="number"
                 step="0.01"
+                class="no-spinner"
                 min="0"
                 formControlName="fed"
                 placeholder="0.00"
@@ -232,6 +236,7 @@
                 id="fSS"
                 type="number"
                 step="0.01"
+                class="no-spinner"
                 min="0"
                 formControlName="ss"
                 placeholder="0.00"
@@ -243,6 +248,7 @@
                 id="fMed"
                 type="number"
                 step="0.01"
+                class="no-spinner"
                 min="0"
                 formControlName="medicare"
                 placeholder="0.00"
@@ -254,6 +260,7 @@
                 id="fState"
                 type="number"
                 step="0.01"
+                class="no-spinner"
                 min="0"
                 formControlName="stateTax"
                 placeholder="0.00"
@@ -265,6 +272,7 @@
                 id="fSDI"
                 type="number"
                 step="0.01"
+                class="no-spinner"
                 min="0"
                 formControlName="sdi"
                 placeholder="0.00"
