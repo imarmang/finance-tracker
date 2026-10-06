@@ -55,6 +55,7 @@ export class App {
 
   constructor() {
     this.store.loadExpenses();
+    this.store.loadIncome();
   }
 
   protected go(path: string): void {

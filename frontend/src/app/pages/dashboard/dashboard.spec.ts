@@ -3,12 +3,29 @@ import { provideRouter } from '@angular/router';
 import { Dashboard } from './dashboard';
 import { FinanceStore } from '../../core/finance.store';
 import { TODAY } from '../../core/format';
+import { ExpenseApi } from '../../core/expense.api';
+import { IncomeApi } from '../../core/income.api';
+import { ExpenseInput, IncomeInput } from '../../core/model';
+
+/** Stands in for the backend so the store saves without a network call. */
+const expenseApi = {
+  list: () => Promise.resolve([]),
+  create: (input: ExpenseInput) => Promise.resolve({ id: 1, ...input }),
+};
+const incomeApi = {
+  list: () => Promise.resolve([]),
+  create: (input: IncomeInput) => Promise.resolve({ id: 2, ...input }),
+};
 
 describe('Dashboard', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Dashboard],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        { provide: ExpenseApi, useValue: expenseApi },
+        { provide: IncomeApi, useValue: incomeApi },
+      ],
     }).compileComponents();
   });
 
@@ -20,9 +37,9 @@ describe('Dashboard', () => {
     expect(el.querySelector('.hero')).toBeFalsy();
   });
 
-  it('renders the hero, charts and budget once a month has data', () => {
+  it('renders the hero, charts and budget once a month has data', async () => {
     const store = TestBed.inject(FinanceStore);
-    store.saveExpense(
+    await store.saveExpense(
       {
         date: TODAY,
         vendor: 'Target',
@@ -34,7 +51,7 @@ describe('Dashboard', () => {
       },
       null,
     );
-    store.saveIncome(
+    await store.saveIncome(
       {
         date: TODAY,
         source: 'Paycheck',

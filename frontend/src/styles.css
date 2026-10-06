@@ -1380,3 +1380,70 @@ details[open] > summary::before {
     transition: none !important;
   }
 }
+
+/* Month breakdown: one scale (share of gross pay), taxes muted, spending in the series blue, kept in status green. */
+.bd-stack {
+  display: flex;
+  gap: 2px;
+  height: 22px;
+  margin: 14px 0 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.bd-seg {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+.bd-seg.taxes,
+.dot.taxes,
+.track i.taxes {
+  background: var(--ink-3);
+}
+.bd-seg.spent,
+.dot.spent,
+.track i.spent {
+  background: var(--s1);
+}
+.bd-seg.kept,
+.dot.kept {
+  background: var(--good);
+}
+.bd-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.bd-legend .over,
+.bd-total .over {
+  color: var(--crit-ink);
+  font-weight: 500;
+}
+.bd-legend .good {
+  color: var(--good-ink);
+  font-weight: 500;
+}
+.bd-h {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 18px 0 2px;
+}
+.bd-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0 2px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+.brow .tag {
+  font-size: 11.5px;
+  font-weight: 400;
+  margin-left: 4px;
+}

@@ -14,6 +14,7 @@ import {
   TODAY_MONTH,
 } from '../../core/format';
 import { BudgetBars } from '../../shared/budget-bars';
+import { MonthBreakdown } from '../../shared/month-breakdown';
 import { CategoryDonut } from '../../shared/category-donut';
 import { TxRow } from '../../shared/tx-row';
 import { WeeklyChart } from '../../shared/weekly-chart';
@@ -21,7 +22,7 @@ import { YearChart } from '../../shared/year-chart';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [BudgetBars, CategoryDonut, TxRow, WeeklyChart, YearChart],
+  imports: [BudgetBars, CategoryDonut, MonthBreakdown, TxRow, WeeklyChart, YearChart],
   templateUrl: './dashboard.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
