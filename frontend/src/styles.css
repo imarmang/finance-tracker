@@ -780,6 +780,15 @@ p {
 .btable {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+.btable th:nth-child(1),
+.btable td:nth-child(1) {
+  width: 40%;
+}
+.btable th:nth-child(n + 2),
+.btable td:nth-child(n + 2) {
+  width: 20%;
 }
 .btable th {
   text-align: right;
