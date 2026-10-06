@@ -14,17 +14,18 @@ import {
 import { daysIn, MONTHS, pad, TODAY, TODAY_MONTH } from './format';
 import { multFor, summarize } from './finance';
 import { ExpenseApi } from './expense.api';
+import { IncomeApi } from './income.api';
 import { ToastService } from './feedback.service';
 
 /**
- * Holds every piece of app state. Expenses are loaded from and saved to the backend;
- * income, cards and budgets live in memory only, so a page reload clears them.
+ * Holds every piece of app state. Expenses and income are loaded from and saved to the backend;
+ * cards and budgets live in memory only, so a page reload clears them.
  */
 @Injectable({ providedIn: 'root' })
 export class FinanceStore {
   private readonly api = inject(ExpenseApi);
+  private readonly incomeApi = inject(IncomeApi);
   private readonly toast = inject(ToastService);
-  private nextId = 1;
 
   readonly categories = CATEGORIES;
   readonly months = MONTHS;
@@ -128,25 +129,38 @@ export class FinanceStore {
     this.expenses.update((list) => [...list, created]);
   }
 
-  saveIncome(input: IncomeInput, id: number | null): Income {
+  /** Fetches every income entry from the backend. Shows a toast if the request fails. */
+  async loadIncome(): Promise<void> {
+    try {
+      this.income.set(await this.incomeApi.list());
+    } catch {
+      this.toast.show('Could not load income. Check that the backend is running.');
+    }
+  }
+
+  async saveIncome(input: IncomeInput, id: number | null): Promise<Income> {
     if (id !== null) {
-      const updated: Income = { ...input, id };
+      const updated = await this.incomeApi.update(id, input);
       this.income.update((list) => list.map((i) => (i.id === id ? updated : i)));
       return updated;
     }
-    const created: Income = { ...input, id: this.nextId++ };
+    const created = await this.incomeApi.create(input);
     this.income.update((list) => [...list, created]);
     return created;
   }
 
-  removeIncome(id: number): Income | undefined {
+  async removeIncome(id: number): Promise<Income | undefined> {
     const removed = this.income().find((i) => i.id === id);
+    await this.incomeApi.remove(id);
     this.income.update((list) => list.filter((i) => i.id !== id));
     return removed;
   }
 
-  restoreIncome(income: Income): void {
-    this.income.update((list) => [...list, income]);
+  /** Re-creates a deleted income entry. The backend assigns it a new id. */
+  async restoreIncome(income: Income): Promise<void> {
+    const { id: _id, ...input } = income;
+    const created = await this.incomeApi.create(input);
+    this.income.update((list) => [...list, created]);
   }
 
   setFilters(patch: Partial<Filters>): void {

@@ -1,4 +1,4 @@
-import { Card, Category, Expense, Income } from './model';
+import { Card, Category, CategoryGroup, Expense, Income } from './model';
 import { money, r2 } from './format';
 
 export function sum(values: number[]): number {
@@ -175,4 +175,65 @@ export function budgetRows(
   });
 
   return { rows, total: names.length };
+}
+
+export interface TaxLine {
+  name: string;
+  amount: number;
+}
+
+export interface SpendLine {
+  name: string;
+  group: CategoryGroup;
+  amount: number;
+}
+
+/**
+ * Where one month's gross pay went. Every amount is a dollar figure; the view turns them into
+ * shares of `base`, which is gross pay (or total money in when there is no income).
+ */
+export interface Breakdown {
+  gross: number;
+  taxes: TaxLine[];
+  taxTotal: number;
+  net: number;
+  spent: number;
+  /** Take-home minus spending. Negative when the month was overspent. */
+  kept: number;
+  /** Denominator for every share: gross pay, or spent + taxes when that is larger (overspent months). */
+  base: number;
+  spending: SpendLine[];
+}
+
+const TAX_LINES: { name: string; field: keyof Pick<Income, 'fed' | 'ss' | 'medicare' | 'stateTax' | 'sdi'> }[] = [
+  { name: 'Federal income tax', field: 'fed' },
+  { name: 'Social Security', field: 'ss' },
+  { name: 'Medicare', field: 'medicare' },
+  { name: 'State tax', field: 'stateTax' },
+  { name: 'SDI', field: 'sdi' },
+];
+
+/** Splits a month's pay into taxes, spending by category, and what was kept. Largest spending first. */
+export function breakdownOf(s: MonthSummary, categories: Category[]): Breakdown {
+  const taxes = TAX_LINES.map(({ name, field }) => ({
+    name,
+    amount: r2(sum(s.income.map((i) => i[field]))),
+  })).filter((t) => t.amount > 0);
+  const taxTotal = r2(sum(taxes.map((t) => t.amount)));
+  const groups = new Map(categories.map((c) => [c.name, c.group]));
+  const spending = Object.entries(s.byCat)
+    .filter(([, amount]) => amount > 0)
+    .map(([name, amount]) => ({ name, group: groups.get(name) ?? 'variable', amount: r2(amount) }))
+    .sort((a, b) => b.amount - a.amount);
+  const kept = r2(s.net - s.spent);
+  return {
+    gross: s.gross,
+    taxes,
+    taxTotal,
+    net: s.net,
+    spent: s.spent,
+    kept,
+    base: Math.max(s.gross, taxTotal + s.spent),
+    spending,
+  };
 }

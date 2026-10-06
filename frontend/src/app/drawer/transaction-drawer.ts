@@ -188,7 +188,7 @@ export class TransactionDrawer {
     if (this.type() === 'expense') {
       void this.saveExpense(again);
     } else {
-      this.saveIncome();
+      void this.saveIncome();
     }
   }
 
@@ -214,10 +214,17 @@ export class TransactionDrawer {
         this.undoable(() => this.store.restoreExpense(removed)),
       );
     } else {
-      const removed = this.store.removeIncome(id);
+      const removed = await this.attempt(
+        () => this.store.removeIncome(id),
+        'Could not delete the income. Try again.',
+      );
+      if (!removed) return;
       this.store.closeDrawer();
-      if (removed)
-        this.toast.show('Transaction deleted', 'Undo', () => this.store.restoreIncome(removed));
+      this.toast.show(
+        'Transaction deleted',
+        'Undo',
+        this.undoable(() => this.store.restoreIncome(removed)),
+      );
     }
   }
 
@@ -334,12 +341,14 @@ export class TransactionDrawer {
     return () => void this.attempt(action, 'Could not undo. Try again.');
   }
 
-  private saveIncome(): void {
+  private async saveIncome(): Promise<void> {
     const form = this.incomeForm;
     if (form.invalid || this.taxesTooHigh() || this.dateTooLate()) {
       form.markAllAsTouched();
       return;
     }
+    if (this.saving()) return;
+
     const v = form.getRawValue();
     const input: IncomeInput = {
       date: v.date ?? '',
@@ -353,12 +362,20 @@ export class TransactionDrawer {
       note: (v.note ?? '').trim(),
     };
 
-    const saved = this.store.saveIncome(input, this.editId);
+    this.saving.set(true);
+    const saved = await this.attempt(
+      () => this.store.saveIncome(input, this.editId),
+      'Could not save the income. Try again.',
+    );
+    this.saving.set(false);
+    if (!saved) return;
+
     const isNew = this.editId === null;
     const label = isNew
       ? `Added ${saved.source} · ${money(netOf(saved))} take-home`
       : 'Changes saved';
-    this.finish(saved.date, label, isNew ? () => this.store.removeIncome(saved.id) : undefined);
+    const undo = isNew ? this.undoable(() => this.store.removeIncome(saved.id)) : undefined;
+    this.finish(saved.date, label, undo);
   }
 
   /** Closes the drawer, moves to the saved entry's month if needed, and confirms with a toast. */
