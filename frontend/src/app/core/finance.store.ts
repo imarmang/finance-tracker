@@ -1,8 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
   CATEGORIES,
-  Card,
-  DEFAULT_CARDS,
   DrawerState,
   EntryType,
   Expense,
@@ -10,27 +8,33 @@ import {
   Filters,
   Income,
   IncomeInput,
+  PaymentMethod,
+  PaymentMethodInput,
 } from './model';
 import { daysIn, MONTHS, pad, TODAY, TODAY_MONTH } from './format';
 import { multFor, summarize } from './finance';
 import { ExpenseApi } from './expense.api';
 import { IncomeApi } from './income.api';
+import { PaymentMethodApi } from './payment-method.api';
 import { ToastService } from './feedback.service';
 
 /**
- * Holds every piece of app state. Expenses and income are loaded from and saved to the backend;
- * cards and budgets live in memory only, so a page reload clears them.
+ * Holds every piece of app state. Expenses, income and payment methods are loaded from and saved to
+ * the backend; budgets live in memory only, so a page reload clears them.
  */
 @Injectable({ providedIn: 'root' })
 export class FinanceStore {
   private readonly api = inject(ExpenseApi);
   private readonly incomeApi = inject(IncomeApi);
+  private readonly paymentApi = inject(PaymentMethodApi);
   private readonly toast = inject(ToastService);
 
   readonly categories = CATEGORIES;
   readonly months = MONTHS;
 
-  readonly cards = signal<Card[]>(DEFAULT_CARDS);
+  readonly cards = signal<PaymentMethod[]>([]);
+  /** True once the payment methods have been fetched successfully. Tells an empty list apart from a failed load. */
+  readonly cardsLoaded = signal(false);
   readonly expenses = signal<Expense[]>([]);
   readonly income = signal<Income[]>([]);
   readonly budgets = signal<Record<string, Record<string, number>>>({});
@@ -190,17 +194,53 @@ export class FinanceStore {
     this.cpp.set(value);
   }
 
-  setCardDefault(index: number, value: number): void {
-    this.updateCard(index, (c) => ({ ...c, def: value }));
+  /** Fetches every payment method from the backend. Shows a toast if the request fails. */
+  async loadCards(): Promise<void> {
+    try {
+      this.cards.set(await this.paymentApi.list());
+      this.cardsLoaded.set(true);
+    } catch {
+      this.toast.show('Could not load payment methods. Check that the backend is running.');
+    }
   }
 
-  setCardRule(index: number, category: string, value: number): void {
-    this.updateCard(index, (c) => ({ ...c, rules: { ...c.rules, [category]: value } }));
+  /** Saves a new payment method. Rejects with a 409 HttpErrorResponse when the name is already used. */
+  async addCard(input: PaymentMethodInput): Promise<PaymentMethod> {
+    const created = await this.paymentApi.create(input);
+    this.cards.update((list) => [...list, created]);
+    return created;
+  }
+
+  /** True when at least one saved expense was paid with this payment method. Such a method cannot be deleted. */
+  cardInUse(name: string): boolean {
+    return this.expenses().some((e) => e.card === name);
+  }
+
+  async removeCard(index: number): Promise<PaymentMethod> {
+    const removed = this.cards()[index];
+    await this.paymentApi.remove(removed.id);
+    this.cards.update((list) => list.filter((c) => c.id !== removed.id));
+    return removed;
+  }
+
+  /** Re-creates a removed payment method at the position it had. The backend assigns it a new id. */
+  async restoreCard(index: number, card: PaymentMethod): Promise<void> {
+    const { id: _id, ...input } = card;
+    const created = await this.paymentApi.create(input);
+    this.cards.update((list) => [...list.slice(0, index), created, ...list.slice(index)]);
+  }
+
+  setCardDefault(index: number, value: number): Promise<void> {
+    return this.updateCard(index, (c) => ({ ...c, defaultMult: value }));
+  }
+
+  setCardRule(index: number, category: string, value: number): Promise<void> {
+    return this.updateCard(index, (c) => ({ ...c, rules: { ...c.rules, [category]: value } }));
   }
 
   /** Moves a bonus to another category. Does nothing if that category already has a bonus. */
-  renameCardRule(index: number, from: string, to: string): void {
-    this.updateCard(index, (c) => {
+  renameCardRule(index: number, from: string, to: string): Promise<void> {
+    return this.updateCard(index, (c) => {
       if (c.rules[to] !== undefined) return c;
       const rules = { ...c.rules };
       rules[to] = rules[from];
@@ -209,43 +249,36 @@ export class FinanceStore {
     });
   }
 
-  removeCardRule(index: number, category: string): void {
-    this.updateCard(index, (c) => {
+  removeCardRule(index: number, category: string): Promise<void> {
+    return this.updateCard(index, (c) => {
       const rules = { ...c.rules };
       delete rules[category];
       return { ...c, rules };
     });
   }
 
-  addCardRule(index: number): void {
+  addCardRule(index: number): Promise<void> {
     const card = this.cards()[index];
     const free = this.categories.find((k) => card.rules[k.name] === undefined);
-    if (!free) return;
-    this.setCardRule(index, free.name, Math.max(card.def, 1) + 1);
+    if (!free) return Promise.resolve();
+    return this.setCardRule(index, free.name, Math.max(card.defaultMult, 1) + 1);
   }
 
-  /** Adds a card with no bonus categories. Returns false if the name is empty or already used. */
-  addCard(name: string, def: number): boolean {
-    const trimmed = name.trim();
-    if (!trimmed || this.cards().some((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
-      return false;
+  /**
+   * Applies a change to one payment method and saves the whole method. The list updates right away;
+   * if the save fails the change is rolled back and the error is rethrown for the page to show.
+   */
+  private async updateCard(index: number, change: (card: PaymentMethod) => PaymentMethod): Promise<void> {
+    const previous = this.cards()[index];
+    const next = change(previous);
+    this.cards.update((list) => list.map((c) => (c.id === previous.id ? next : c)));
+    try {
+      const { id, ...input } = next;
+      const saved = await this.paymentApi.update(id, input);
+      this.cards.update((list) => list.map((c) => (c.id === id ? saved : c)));
+    } catch (error) {
+      this.cards.update((list) => list.map((c) => (c.id === previous.id ? previous : c)));
+      throw error;
     }
-    this.cards.update((list) => [...list, { name: trimmed, def, rules: {} }]);
-    return true;
-  }
-
-  removeCard(index: number): Card {
-    const removed = this.cards()[index];
-    this.cards.update((list) => list.filter((_, i) => i !== index));
-    return removed;
-  }
-
-  /** Puts a removed card back at the position it had. */
-  restoreCard(index: number, card: Card): void {
-    this.cards.update((list) => [...list.slice(0, index), card, ...list.slice(index)]);
-  }
-
-  private updateCard(index: number, change: (card: Card) => Card): void {
-    this.cards.update((list) => list.map((c, i) => (i === index ? change(c) : c)));
   }
 }

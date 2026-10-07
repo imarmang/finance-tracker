@@ -1,4 +1,4 @@
-import { Card, Category, CategoryGroup, Expense, Income } from './model';
+import { Category, CategoryGroup, Expense, Income, PaymentMethod } from './model';
 import { money, r2 } from './format';
 
 export function sum(values: number[]): number {
@@ -11,11 +11,11 @@ export function netOf(income: Income): number {
 }
 
 /** Multiplier a card gives for a category: a bonus rule if one exists, otherwise the card's default. */
-export function multFor(cards: Card[], cardName: string, category: string): number {
+export function multFor(cards: PaymentMethod[], cardName: string, category: string): number {
   const card = cards.find((c) => c.name === cardName);
   if (!card) return 0;
   const rule = card.rules[category];
-  return rule !== undefined ? rule : card.def;
+  return rule !== undefined ? rule : card.defaultMult;
 }
 
 export interface CardTotals {

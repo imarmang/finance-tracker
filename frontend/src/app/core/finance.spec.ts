@@ -1,5 +1,10 @@
 import { breakdownOf, multFor, netOf, summarize } from './finance';
-import { CATEGORIES, DEFAULT_CARDS, Expense, Income } from './model';
+import { CATEGORIES, Expense, Income, PaymentMethod } from './model';
+
+const CARDS: PaymentMethod[] = [
+  { id: 1, name: 'Apple Card', kind: 'CREDIT_CARD', defaultMult: 1, rules: { Travel: 3 } },
+  { id: 2, name: 'Debit', kind: 'DEBIT_CARD', defaultMult: 0, rules: {} },
+];
 
 describe('finance calculations', () => {
   it('takes every deduction out of gross pay', () => {
@@ -8,9 +13,10 @@ describe('finance calculations', () => {
   });
 
   it('uses a bonus rule when the card has one, otherwise the default', () => {
-    expect(multFor(DEFAULT_CARDS, 'Apple Card', 'Travel')).toBe(3);
-    expect(multFor(DEFAULT_CARDS, 'Apple Card', 'Rent')).toBe(1);
-    expect(multFor(DEFAULT_CARDS, 'Unknown card', 'Rent')).toBe(0);
+    expect(multFor(CARDS, 'Apple Card', 'Travel')).toBe(3);
+    expect(multFor(CARDS, 'Apple Card', 'Rent')).toBe(1);
+    expect(multFor(CARDS, 'Debit', 'Rent')).toBe(0);
+    expect(multFor(CARDS, 'Unknown card', 'Rent')).toBe(0);
   });
 
   it('summarizes one month of expenses and income', () => {

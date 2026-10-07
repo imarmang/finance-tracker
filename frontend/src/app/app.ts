@@ -18,7 +18,7 @@ export const NAV: NavItem[] = [
   { path: 'dashboard', label: 'Dashboard', short: 'Dashboard' },
   { path: 'transactions', label: 'Transactions', short: 'Transactions' },
   { path: 'budget', label: 'Budget', short: 'Budget' },
-  { path: 'cards', label: 'Cards & rewards', short: 'Cards' },
+  { path: 'cards', label: 'Payment methods', short: 'Payments' },
 ];
 
 @Component({
@@ -56,6 +56,7 @@ export class App {
   constructor() {
     this.store.loadExpenses();
     this.store.loadIncome();
+    this.store.loadCards();
   }
 
   protected go(path: string): void {

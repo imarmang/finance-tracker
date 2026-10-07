@@ -73,6 +73,14 @@ public class JdbcExpenseRepository implements ExpenseRepository {
                 .update() > 0;
     }
 
+    @Override
+    public boolean existsByCard(String card) {
+        return jdbc.sql("select exists (select 1 from expenses where card = :card)")
+                .param("card", card)
+                .query(Boolean.class)
+                .single();
+    }
+
     private JdbcClient.StatementSpec bind(String sql, Expense expense) {
         return jdbc.sql(sql)
                 .param("date", expense.date())
