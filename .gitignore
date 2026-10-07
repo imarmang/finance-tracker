@@ -32,3 +32,6 @@ build/
 .vscode/
 .env
 
+
+# Runtime logs
+backend/logs/

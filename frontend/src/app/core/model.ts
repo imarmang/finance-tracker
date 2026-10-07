@@ -25,7 +25,6 @@ const CATEGORY_GROUPS = [
   ['Car Payment', 'fixed'],
   ['Car Insurance', 'fixed'],
   ['Electricity', 'fixed'],
-  ['Water / Sewer', 'fixed'],
   ['Renters Insurance', 'fixed'],
   ['Phone Bill', 'fixed'],
   ['Subscriptions', 'fixed'],
