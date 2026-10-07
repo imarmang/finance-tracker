@@ -6,12 +6,17 @@ import { TODAY } from '../../core/format';
 import { ExpenseApi } from '../../core/expense.api';
 import { IncomeApi } from '../../core/income.api';
 import { PaymentMethodApi } from '../../core/payment-method.api';
+import { BudgetApi } from '../../core/budget.api';
 import { ExpenseInput, IncomeInput } from '../../core/model';
 
 /** Stands in for the backend so the store saves without a network call. */
 const expenseApi = {
   list: () => Promise.resolve([]),
   create: (input: ExpenseInput) => Promise.resolve({ id: 1, ...input }),
+};
+const budgetApi = {
+  list: () => Promise.resolve([]),
+  save: () => Promise.resolve({}),
 };
 const paymentMethodApi = {
   list: () => Promise.resolve([]),
@@ -30,6 +35,7 @@ describe('Dashboard', () => {
         { provide: ExpenseApi, useValue: expenseApi },
         { provide: IncomeApi, useValue: incomeApi },
         { provide: PaymentMethodApi, useValue: paymentMethodApi },
+        { provide: BudgetApi, useValue: budgetApi },
       ],
     }).compileComponents();
   });

@@ -16,17 +16,19 @@ import { multFor, summarize } from './finance';
 import { ExpenseApi } from './expense.api';
 import { IncomeApi } from './income.api';
 import { PaymentMethodApi } from './payment-method.api';
+import { BudgetApi, MonthBudgetDto } from './budget.api';
 import { ToastService } from './feedback.service';
 
 /**
  * Holds every piece of app state. Expenses, income and payment methods are loaded from and saved to
- * the backend; budgets live in memory only, so a page reload clears them.
+ * the backend, including each month's budget and expected take-home pay.
  */
 @Injectable({ providedIn: 'root' })
 export class FinanceStore {
   private readonly api = inject(ExpenseApi);
   private readonly incomeApi = inject(IncomeApi);
   private readonly paymentApi = inject(PaymentMethodApi);
+  private readonly budgetApi = inject(BudgetApi);
   private readonly toast = inject(ToastService);
 
   readonly categories = CATEGORIES;
@@ -171,9 +173,21 @@ export class FinanceStore {
     this.filters.update((f) => ({ ...f, ...patch }));
   }
 
+  /** Fetches every saved month's budget. Shows a toast if the request fails. */
+  async loadBudgets(): Promise<void> {
+    try {
+      const months = await this.budgetApi.list();
+      this.budgets.set(Object.fromEntries(months.map((m) => [m.month, m.categories])));
+      this.expected.set(Object.fromEntries(months.map((m) => [m.month, m.expectedIncome])));
+    } catch {
+      this.toast.show('Could not load budgets. Check that the backend is running.');
+    }
+  }
+
   setBudget(category: string, amount: number): void {
     const key = this.month();
     this.budgets.update((all) => ({ ...all, [key]: { ...(all[key] ?? {}), [category]: amount } }));
+    this.saveMonth(key);
   }
 
   copyBudgetFromPrevious(): void {
@@ -183,11 +197,25 @@ export class FinanceStore {
     const prev = MONTHS[i - 1];
     this.budgets.update((all) => ({ ...all, [key]: { ...(all[prev] ?? {}) } }));
     this.expected.update((all) => ({ ...all, [key]: all[prev] ?? 0 }));
+    this.saveMonth(key);
   }
 
   setExpected(amount: number): void {
     const key = this.month();
     this.expected.update((all) => ({ ...all, [key]: amount }));
+    this.saveMonth(key);
+  }
+
+  /** Saves one month's budget. Limits of zero or less mean "no limit", so they are not stored. */
+  private saveMonth(month: string): void {
+    const categories = Object.fromEntries(
+      Object.entries(this.budgets()[month] ?? {}).filter(([, amount]) => amount > 0),
+    );
+    const input: Pick<MonthBudgetDto, 'expectedIncome' | 'categories'> = {
+      expectedIncome: this.expected()[month] ?? 0,
+      categories,
+    };
+    this.budgetApi.save(month, input).catch(() => this.toast.show('Could not save the budget. Try again.'));
   }
 
   setCpp(value: number): void {

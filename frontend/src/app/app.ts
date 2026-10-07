@@ -57,6 +57,7 @@ export class App {
     this.store.loadExpenses();
     this.store.loadIncome();
     this.store.loadCards();
+    this.store.loadBudgets();
   }
 
   protected go(path: string): void {

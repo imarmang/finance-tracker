@@ -34,7 +34,6 @@ public record Expense(
         CAR_PAYMENT("Car Payment", Group.FIXED_BILLS),
         CAR_INSURANCE("Car Insurance", Group.FIXED_BILLS),
         ELECTRICITY("Electricity", Group.FIXED_BILLS),
-        WATER_SEWER("Water / Sewer", Group.FIXED_BILLS),
         RENTERS_INSURANCE("Renters Insurance", Group.FIXED_BILLS),
         PHONE_BILL("Phone Bill", Group.FIXED_BILLS),
         SUBSCRIPTIONS("Subscriptions", Group.FIXED_BILLS),
