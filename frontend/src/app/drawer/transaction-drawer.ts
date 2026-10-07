@@ -28,6 +28,7 @@ import {
   IncomeInput,
 } from '../core/model';
 import { ToastService } from '../core/feedback.service';
+import { Router } from '@angular/router';
 
 /** Smallest amount an expense can be; the amount must be more than this. */
 const MIN_EXPENSE_AMOUNT = 0.25;
@@ -49,6 +50,7 @@ export class TransactionDrawer {
   private readonly store = inject(FinanceStore);
   private readonly fb = inject(FormBuilder);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   protected readonly variable = CATEGORIES.filter((c) => c.group === 'variable');
   protected readonly bills = CATEGORIES.filter((c) => c.group === 'fixed');
@@ -59,6 +61,10 @@ export class TransactionDrawer {
   protected readonly shortDate = shortDate;
 
   protected readonly open = computed(() => this.store.drawer() !== null);
+  /** True when payment methods loaded fine but there are none, so an expense cannot be paid for yet. */
+  protected readonly noPaymentMethods = computed(
+    () => this.store.cardsLoaded() && this.store.cards().length === 0,
+  );
   protected readonly type = computed<EntryType>(() => this.store.drawer()?.type ?? 'expense');
   protected readonly editing = computed(() => (this.store.drawer()?.id ?? null) !== null);
   protected readonly title = computed(() =>
@@ -286,8 +292,14 @@ export class TransactionDrawer {
     }
   }
 
+  protected addPaymentMethod(): void {
+    this.store.closeDrawer();
+    this.router.navigateByUrl('/cards');
+  }
+
   private async saveExpense(again: boolean): Promise<void> {
     const form = this.expenseForm;
+    if (this.noPaymentMethods()) return;
     if (form.invalid || this.dateTooLate()) {
       form.markAllAsTouched();
       return;

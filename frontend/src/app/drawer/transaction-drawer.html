@@ -127,16 +127,28 @@
 
         <fieldset class="field">
           <legend>Paid with</legend>
-          <div class="chips">
-            @for (c of store.cards(); track c.name) {
-              <label class="chip">
-                <input type="radio" formControlName="card" [value]="c.name" />
-                <span>{{ c.name }}</span>
-              </label>
+          @if (noPaymentMethods()) {
+            <div class="no-methods">
+              <p>
+                You have no payment methods yet. Add a credit card, debit card, or checking account
+                first, then you can record what you paid with it.
+              </p>
+              <button type="button" class="btn primary" (click)="addPaymentMethod()">
+                Add a payment method
+              </button>
+            </div>
+          } @else {
+            <div class="chips">
+              @for (c of store.cards(); track c.name) {
+                <label class="chip">
+                  <input type="radio" formControlName="card" [value]="c.name" />
+                  <span>{{ c.name }}</span>
+                </label>
+              }
+            </div>
+            @if (invalid(expenseForm.controls.card)) {
+              <p class="err">Pick how you paid.</p>
             }
-          </div>
-          @if (invalid(expenseForm.controls.card)) {
-            <p class="err">Pick how you paid.</p>
           }
         </fieldset>
 
@@ -167,11 +179,11 @@
 
       <div class="dfoot" id="dFoot">
         <div class="grow">
-          <button type="submit" class="btn primary">
+          <button type="submit" class="btn primary" [disabled]="noPaymentMethods()">
             {{ editing() ? 'Save changes' : 'Save expense' }}
           </button>
           @if (!editing()) {
-            <button type="button" class="btn" (click)="save(true)">Save &amp; add another</button>
+            <button type="button" class="btn" [disabled]="noPaymentMethods()" (click)="save(true)">Save &amp; add another</button>
           }
         </div>
         @if (editing()) {

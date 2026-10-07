@@ -5,12 +5,57 @@ export interface Category {
   group: CategoryGroup;
 }
 
-export interface Card {
+/** A way the user pays: credit card, debit card, checking account, cash, or other. */
+export type PaymentKind = 'CREDIT_CARD' | 'DEBIT_CARD' | 'CHECKING' | 'CASH' | 'OTHER';
+
+export interface PaymentMethod {
+  id: number;
   name: string;
-  /** Points per dollar for purchases that have no bonus rule. */
-  def: number;
+  kind: PaymentKind;
+  /** Points per dollar for purchases that have no bonus rule. Only credit cards earn points. */
+  defaultMult: number;
   /** Bonus multipliers keyed by category name. */
   rules: Record<string, number>;
+}
+
+export type PaymentMethodInput = Omit<PaymentMethod, 'id'>;
+
+const CATEGORY_GROUPS = [
+  ['Rent', 'fixed'],
+  ['Car Payment', 'fixed'],
+  ['Car Insurance', 'fixed'],
+  ['Electricity', 'fixed'],
+  ['Water / Sewer', 'fixed'],
+  ['Renters Insurance', 'fixed'],
+  ['Phone Bill', 'fixed'],
+  ['Subscriptions', 'fixed'],
+  ['Health Insurance', 'fixed'],
+  ['Dental Insurance', 'fixed'],
+  ['Vision Insurance', 'fixed'],
+  ['HSA Pretax', 'fixed'],
+  ['Groceries', 'variable'],
+  ['Dining', 'variable'],
+  ['Gas For Car', 'variable'],
+  ['Travel', 'variable'],
+  ['Shopping', 'variable'],
+  ['Drug Store', 'variable'],
+  ['House Supplies', 'variable'],
+  ['Coffee', 'variable'],
+  ['Miscellaneous', 'variable'],
+] as const;
+
+export const CATEGORIES: Category[] = CATEGORY_GROUPS.map(([name, group]) => ({ name, group }));
+
+export const PAYMENT_KINDS: { value: PaymentKind; label: string }[] = [
+  { value: 'CREDIT_CARD', label: 'Credit card' },
+  { value: 'DEBIT_CARD', label: 'Debit card' },
+  { value: 'CHECKING', label: 'Checking account' },
+  { value: 'CASH', label: 'Cash' },
+  { value: 'OTHER', label: 'Other' },
+];
+
+export function kindLabel(kind: PaymentKind): string {
+  return PAYMENT_KINDS.find((k) => k.value === kind)?.label ?? 'Other';
 }
 
 export interface Expense {
@@ -55,39 +100,6 @@ export interface DrawerState {
   id: number | null;
 }
 
-const CATEGORY_GROUPS = [
-  ['Rent', 'fixed'],
-  ['Car Payment', 'fixed'],
-  ['Car Insurance', 'fixed'],
-  ['Electricity', 'fixed'],
-  ['Water / Sewer', 'fixed'],
-  ['Renters Insurance', 'fixed'],
-  ['Phone Bill', 'fixed'],
-  ['Subscriptions', 'fixed'],
-  ['Health Insurance', 'fixed'],
-  ['Dental Insurance', 'fixed'],
-  ['Vision Insurance', 'fixed'],
-  ['HSA Pretax', 'fixed'],
-  ['Groceries', 'variable'],
-  ['Dining', 'variable'],
-  ['Gas For Car', 'variable'],
-  ['Travel', 'variable'],
-  ['Shopping', 'variable'],
-  ['Drug Store', 'variable'],
-  ['House Supplies', 'variable'],
-  ['Coffee', 'variable'],
-  ['Miscellaneous', 'variable'],
-] as const;
-
-export const CATEGORIES: Category[] = CATEGORY_GROUPS.map(([name, group]) => ({ name, group }));
 
 export const INCOME_SOURCES = ['Paycheck', 'Tutoring', 'Interest – HYSA', 'Other'];
 
-export const DEFAULT_CARDS: Card[] = [
-  { name: 'Chase Freedom Unlimited', def: 1.5, rules: {} },
-  { name: 'Discover It', def: 1, rules: {} },
-  { name: 'Apple Card', def: 1, rules: { Travel: 3 } },
-  { name: 'AMEX', def: 1, rules: { Dining: 4 } },
-  { name: 'Debit', def: 0, rules: {} },
-  { name: 'Check', def: 0, rules: {} },
-];

@@ -21,4 +21,7 @@ public interface ExpenseRepository {
 
     /** @return true if an expense was removed, false if the id was unknown */
     boolean deleteById(Long id);
+
+    /** @return true if at least one expense was paid with the card with this exact name */
+    boolean existsByCard(String card);
 }

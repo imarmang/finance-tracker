@@ -5,12 +5,16 @@ import { FinanceStore } from '../../core/finance.store';
 import { TODAY } from '../../core/format';
 import { ExpenseApi } from '../../core/expense.api';
 import { IncomeApi } from '../../core/income.api';
+import { PaymentMethodApi } from '../../core/payment-method.api';
 import { ExpenseInput, IncomeInput } from '../../core/model';
 
 /** Stands in for the backend so the store saves without a network call. */
 const expenseApi = {
   list: () => Promise.resolve([]),
   create: (input: ExpenseInput) => Promise.resolve({ id: 1, ...input }),
+};
+const paymentMethodApi = {
+  list: () => Promise.resolve([]),
 };
 const incomeApi = {
   list: () => Promise.resolve([]),
@@ -25,6 +29,7 @@ describe('Dashboard', () => {
         provideRouter([]),
         { provide: ExpenseApi, useValue: expenseApi },
         { provide: IncomeApi, useValue: incomeApi },
+        { provide: PaymentMethodApi, useValue: paymentMethodApi },
       ],
     }).compileComponents();
   });
