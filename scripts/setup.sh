@@ -18,12 +18,14 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 set -u
 
 echo "Installing Java ${JAVA_VERSION}..."
+set +u
 sdk install java "${JAVA_VERSION}" < /dev/null || true
 sdk default java "${JAVA_VERSION}"
 
 echo "Installing Maven ${MAVEN_VERSION}..."
 sdk install maven "${MAVEN_VERSION}" < /dev/null || true
 sdk default maven "${MAVEN_VERSION}"
+set -u
 
 if [ ! -d "$HOME/.nvm" ]; then
   echo "Installing nvm..."
@@ -34,11 +36,11 @@ set +u
 export NVM_DIR="$HOME/.nvm"
 # shellcheck disable=SC1091
 source "$NVM_DIR/nvm.sh"
-set -u
 
 echo "Installing latest LTS Node.js..."
 nvm install --lts
 nvm use --lts
+set -u
 
 echo
 echo "Setup complete. Installed versions:"
