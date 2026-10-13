@@ -75,6 +75,33 @@
       </div>
     </div>
 
+    @if (store.savingsSummary(); as ss) {
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Saved this month</h2>
+            <p class="sub">
+              Profit {{ money(ss.profit) }} · Saved {{ money(ss.totalSaved) }} · Not yet moved to
+              savings {{ money(ss.notYetSaved) }}
+            </p>
+          </div>
+          <button class="link" type="button" (click)="go('savings')">Manage savings</button>
+        </div>
+        @if (ss.savedByAccount.length) {
+          <div style="display: flex; gap: 18px; flex-wrap: wrap">
+            @for (row of ss.savedByAccount; track row.accountId) {
+              <div>
+                <div class="faint" style="font-size: 12px">{{ row.name }}</div>
+                <div class="mono" style="font-weight: 500; font-size: 16px">{{ money(row.amount) }}</div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="hint" style="margin: 0">No deposits recorded in {{ monthLabel(s.key) }} yet.</p>
+        }
+      </div>
+    }
+
     @if (s.spent > 0) {
       <div class="grid cols2">
         <app-category-donut [summary]="s" />
