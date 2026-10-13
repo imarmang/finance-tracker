@@ -81,6 +81,10 @@ export function eventValue(event: Event): string {
   return (event.target as HTMLInputElement | HTMLSelectElement).value;
 }
 
+export function eventChecked(event: Event): boolean {
+  return (event.target as HTMLInputElement).checked;
+}
+
 /** Reads a number from an input, treating empty or invalid text as 0. */
 export function parseNumber(value: string): number {
   const v = parseFloat(value.replace(/,/g, ''));

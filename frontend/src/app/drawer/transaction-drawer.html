@@ -24,6 +24,14 @@
       >
         Income
       </button>
+      <button
+        type="button"
+        [attr.aria-pressed]="type() === 'savings'"
+        [disabled]="editing() && type() !== 'savings'"
+        (click)="setType('savings')"
+      >
+        Savings
+      </button>
     </div>
   </div>
 
@@ -194,7 +202,7 @@
         <button type="button" class="btn ghost" (click)="store.closeDrawer()">Cancel</button>
       </div>
     </form>
-  } @else {
+  } @else if (type() === 'income') {
     <form id="dForm" [formGroup]="incomeForm" (ngSubmit)="save(false)" novalidate>
       <div id="dFields">
         <fieldset class="field">
@@ -339,6 +347,131 @@
         <div class="grow">
           <button type="submit" class="btn primary">
             {{ editing() ? 'Save changes' : 'Save income' }}
+          </button>
+        </div>
+        @if (editing()) {
+          <button type="button" class="btn danger" (click)="deleteEntry()">
+            {{ deleteArmed() ? 'Click again to delete' : 'Delete' }}
+          </button>
+        }
+        <button type="button" class="btn ghost" (click)="store.closeDrawer()">Cancel</button>
+      </div>
+    </form>
+  } @else {
+    <form id="dForm" [formGroup]="savingsForm" (ngSubmit)="save(false)" novalidate>
+      <div id="dFields">
+        <fieldset class="field">
+          <legend>Which account?</legend>
+          @if (noSavingsAccounts()) {
+            <div class="no-methods">
+              <p>
+                You have no savings accounts yet. Add one first, then you can record a deposit
+                into it.
+              </p>
+              <button type="button" class="btn primary" (click)="addSavingsAccount()">
+                Add a savings account
+              </button>
+            </div>
+          } @else {
+            <div class="chips">
+              @for (a of store.savingsAccounts(); track a.id) {
+                <label class="chip">
+                  <input type="radio" formControlName="accountId" [value]="a.id" />
+                  <span>{{ a.name }}</span>
+                </label>
+              }
+            </div>
+            @if (invalid(savingsForm.controls.accountId)) {
+              <p class="err">Pick an account.</p>
+            }
+          }
+        </fieldset>
+
+        <div class="seg" role="group" aria-label="Deposit or withdraw" style="margin-bottom: 16px">
+          <button
+            type="button"
+            [attr.aria-pressed]="savingsForm.controls.direction.value === 'deposit'"
+            [disabled]="editing()"
+            (click)="setDirection('deposit')"
+          >
+            Deposit
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="savingsForm.controls.direction.value === 'withdraw'"
+            [disabled]="editing()"
+            (click)="setDirection('withdraw')"
+          >
+            Withdraw
+          </button>
+        </div>
+
+        <div class="field amount">
+          <label for="fSavingsAmount">Amount</label>
+          <div class="money-in">
+            <span>$</span>
+            <input
+              id="fSavingsAmount"
+              formControlName="amount"
+              inputmode="decimal"
+              autocomplete="off"
+              placeholder="0.00"
+              (input)="onAmountInput($event, savingsForm.controls.amount)"
+              [attr.aria-invalid]="invalid(savingsForm.controls.amount) || withdrawalExceedsBalance() || null"
+            />
+          </div>
+          @if (invalid(savingsForm.controls.amount)) {
+            <p class="err">Enter an amount more than $0.</p>
+          } @else if (withdrawalExceedsBalance()) {
+            <p class="err">That account doesn't have that much to withdraw.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="fSavingsDate">Date</label>
+          <div class="date-row">
+            <input id="fSavingsDate" type="date" formControlName="date" [max]="store.maxDate()" />
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="savingsForm.controls.date.setValue(TODAY)"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              class="chip-btn"
+              (click)="savingsForm.controls.date.setValue(YESTERDAY)"
+            >
+              Yesterday
+            </button>
+          </div>
+          @if (invalid(savingsForm.controls.date)) {
+            <p class="err">Choose a date.</p>
+          }
+          @if (dateTooLate()) {
+            <p class="err">Choose a date on or before {{ shortDate(store.maxDate()) }}.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="fSavingsNote">Note</label>
+          <input id="fSavingsNote" formControlName="note" placeholder="Optional" />
+        </div>
+      </div>
+
+      <div class="dfoot" id="dFoot">
+        <div class="grow">
+          <button
+            type="submit"
+            class="btn primary"
+            [disabled]="noSavingsAccounts() || withdrawalExceedsBalance()"
+          >
+            {{
+              editing() ? 'Save changes'
+              : savingsForm.controls.direction.value === 'withdraw' ? 'Save withdrawal'
+              : 'Save deposit'
+            }}
           </button>
         </div>
         @if (editing()) {

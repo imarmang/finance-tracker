@@ -26,6 +26,8 @@ import {
   ExpenseInput,
   INCOME_SOURCES,
   IncomeInput,
+  SavingsDepositInput,
+  SavingsDirection,
 } from '../core/model';
 import { ToastService } from '../core/feedback.service';
 import { Router } from '@angular/router';
@@ -38,6 +40,13 @@ function amountAboveMinimum(control: AbstractControl): ValidationErrors | null {
   const value = control.value;
   if (value === null || value === '') return null;
   return Number(value) > MIN_EXPENSE_AMOUNT ? null : { amountTooLow: true };
+}
+
+/** Rejects amounts that are not above zero. Empty is left to Validators.required. */
+function amountAboveZero(control: AbstractControl): ValidationErrors | null {
+  const value = control.value;
+  if (value === null || value === '') return null;
+  return Number(value) > 0 ? null : { amountTooLow: true };
 }
 
 @Component({
@@ -65,11 +74,18 @@ export class TransactionDrawer {
   protected readonly noPaymentMethods = computed(
     () => this.store.cardsLoaded() && this.store.cards().length === 0,
   );
+  /** True when savings accounts loaded fine but there are none, so a deposit cannot be recorded yet. */
+  protected readonly noSavingsAccounts = computed(
+    () => this.store.savingsAccountsLoaded() && this.store.savingsAccounts().length === 0,
+  );
   protected readonly type = computed<EntryType>(() => this.store.drawer()?.type ?? 'expense');
   protected readonly editing = computed(() => (this.store.drawer()?.id ?? null) !== null);
-  protected readonly title = computed(() =>
-    this.editing() ? 'Edit transaction' : 'Add transaction',
-  );
+  protected readonly title = computed(() => {
+    if (this.type() !== 'savings') return this.editing() ? 'Edit transaction' : 'Add transaction';
+    const isWithdraw = this.savingsValue().direction === 'withdraw';
+    if (this.editing()) return isWithdraw ? 'Edit withdrawal' : 'Edit deposit';
+    return isWithdraw ? 'Add withdrawal' : 'Add savings deposit';
+  });
 
   protected readonly submitted = signal(false);
   protected readonly deleteArmed = signal(false);
@@ -106,11 +122,25 @@ export class TransactionDrawer {
     note: this.fb.control<string | null>('', Validators.maxLength(200)),
   });
 
+  protected readonly savingsForm = this.fb.group({
+    accountId: this.fb.control<number | null>(null, Validators.required),
+    direction: this.fb.control<SavingsDirection>('deposit'),
+    amount: this.fb.control<string | null>(null, [Validators.required, amountAboveZero]),
+    date: this.fb.control<string | null>(TODAY, Validators.required),
+    note: this.fb.control<string | null>('', Validators.maxLength(200)),
+  });
+
+  /** The signed amount of the deposit/withdrawal being edited, so balance checks can exclude it. Zero for a new entry. */
+  private editingAmount = 0;
+
   private readonly expenseValue = toSignal(this.expenseForm.valueChanges, {
     initialValue: this.expenseForm.getRawValue(),
   });
   private readonly incomeValue = toSignal(this.incomeForm.valueChanges, {
     initialValue: this.incomeForm.getRawValue(),
+  });
+  private readonly savingsValue = toSignal(this.savingsForm.valueChanges, {
+    initialValue: this.savingsForm.getRawValue(),
   });
 
   protected readonly preview = computed(() => {
@@ -133,7 +163,11 @@ export class TransactionDrawer {
 
   /** True when the entry being saved is dated after the last day of the month being viewed. */
   protected readonly dateTooLate = computed(() => {
-    const date = this.type() === 'expense' ? this.expenseValue().date : this.incomeValue().date;
+    const type = this.type();
+    const date =
+      type === 'expense' ? this.expenseValue().date
+      : type === 'income' ? this.incomeValue().date
+      : this.savingsValue().date;
     return !!date && date > this.store.maxDate();
   });
 
@@ -149,6 +183,17 @@ export class TransactionDrawer {
   protected readonly takeHome = computed(() =>
     money((Number(this.incomeValue().gross) || 0) - this.taxes()),
   );
+
+  /** True when a withdrawal would take the selected account below a zero balance. */
+  protected readonly withdrawalExceedsBalance = computed(() => {
+    const v = this.savingsValue();
+    if (v.direction !== 'withdraw' || v.accountId === null) return false;
+    const amount = Number(v.amount) || 0;
+    const account = this.store.savingsAccounts().find((a) => a.id === v.accountId);
+    if (!account) return false;
+    const alreadyWithdrawn = this.editingAmount < 0 ? -this.editingAmount : 0;
+    return amount > account.balance + alreadyWithdrawn;
+  });
 
   constructor() {
     effect(() => {
@@ -185,6 +230,11 @@ export class TransactionDrawer {
     this.store.openDrawer(type, null);
   }
 
+  protected setDirection(direction: SavingsDirection): void {
+    if (this.editing()) return;
+    this.savingsForm.controls.direction.setValue(direction);
+  }
+
   protected markMultTouched(): void {
     this.multTouched = true;
   }
@@ -193,8 +243,10 @@ export class TransactionDrawer {
     this.submitted.set(true);
     if (this.type() === 'expense') {
       void this.saveExpense(again);
-    } else {
+    } else if (this.type() === 'income') {
       void this.saveIncome();
+    } else {
+      void this.saveSavingsDeposit();
     }
   }
 
@@ -219,7 +271,7 @@ export class TransactionDrawer {
         'Undo',
         this.undoable(() => this.store.restoreExpense(removed)),
       );
-    } else {
+    } else if (this.type() === 'income') {
       const removed = await this.attempt(
         () => this.store.removeIncome(id),
         'Could not delete the income. Try again.',
@@ -230,6 +282,18 @@ export class TransactionDrawer {
         'Transaction deleted',
         'Undo',
         this.undoable(() => this.store.restoreIncome(removed)),
+      );
+    } else {
+      const removed = await this.attempt(
+        () => this.store.removeSavingsDeposit(id),
+        'Could not delete the entry. Try again.',
+      );
+      if (!removed) return;
+      this.store.closeDrawer();
+      this.toast.show(
+        removed.amount < 0 ? 'Withdrawal deleted' : 'Deposit deleted',
+        'Undo',
+        this.undoable(() => this.store.restoreSavingsDeposit(removed)),
       );
     }
   }
@@ -254,7 +318,7 @@ export class TransactionDrawer {
         mult: e ? e.mult : this.store.multFor(card ?? '', ''),
         note: e?.note ?? '',
       });
-    } else {
+    } else if (drawer.type === 'income') {
       const i =
         drawer.id !== null ? this.store.income().find((x) => x.id === drawer.id) : undefined;
       this.incomeForm.reset({
@@ -267,6 +331,17 @@ export class TransactionDrawer {
         sdi: i?.sdi ?? null,
         date: i?.date ?? this.store.defaultDate(),
         note: i?.note ?? '',
+      });
+    } else {
+      const d =
+        drawer.id !== null ? this.store.savingsDeposits().find((x) => x.id === drawer.id) : undefined;
+      this.editingAmount = d?.amount ?? 0;
+      this.savingsForm.reset({
+        accountId: d?.accountId ?? drawer.accountId ?? this.store.savingsAccounts()[0]?.id ?? null,
+        direction: d ? (d.amount < 0 ? 'withdraw' : 'deposit') : drawer.direction ?? 'deposit',
+        amount: d ? String(Math.abs(d.amount)) : null,
+        date: d?.date ?? this.store.defaultDate(),
+        note: d?.note ?? '',
       });
     }
   }
@@ -295,6 +370,11 @@ export class TransactionDrawer {
   protected addPaymentMethod(): void {
     this.store.closeDrawer();
     this.router.navigateByUrl('/cards');
+  }
+
+  protected addSavingsAccount(): void {
+    this.store.closeDrawer();
+    this.router.navigateByUrl('/savings');
   }
 
   private async saveExpense(again: boolean): Promise<void> {
@@ -387,6 +467,46 @@ export class TransactionDrawer {
       ? `Added ${saved.source} · ${money(netOf(saved))} take-home`
       : 'Changes saved';
     const undo = isNew ? this.undoable(() => this.store.removeIncome(saved.id)) : undefined;
+    this.finish(saved.date, label, undo);
+  }
+
+  private async saveSavingsDeposit(): Promise<void> {
+    const form = this.savingsForm;
+    if (this.noSavingsAccounts()) return;
+    if (form.invalid || this.dateTooLate() || this.withdrawalExceedsBalance()) {
+      form.markAllAsTouched();
+      return;
+    }
+    if (this.saving()) return;
+
+    const v = form.getRawValue();
+    const magnitude = r2(Number(v.amount));
+    const input: SavingsDepositInput = {
+      date: v.date ?? '',
+      accountId: v.accountId ?? 0,
+      amount: v.direction === 'withdraw' ? -magnitude : magnitude,
+      note: (v.note ?? '').trim(),
+    };
+
+    this.saving.set(true);
+    const saved = await this.attempt(
+      () => this.store.saveSavingsDeposit(input, this.editId),
+      v.direction === 'withdraw'
+        ? 'Could not record the withdrawal. Try again.'
+        : 'Could not save the deposit. Try again.',
+    );
+    this.saving.set(false);
+    if (!saved) return;
+
+    const isNew = this.editId === null;
+    const isWithdraw = saved.amount < 0;
+    const accountName = this.store.savingsAccounts().find((a) => a.id === saved.accountId)?.name ?? 'savings';
+    const label = isNew
+      ? isWithdraw
+        ? `Withdrew ${money(-saved.amount)} from ${accountName}`
+        : `Added ${money(saved.amount)} to ${accountName}`
+      : 'Changes saved';
+    const undo = isNew ? this.undoable(() => this.store.removeSavingsDeposit(saved.id)) : undefined;
     this.finish(saved.date, label, undo);
   }
 

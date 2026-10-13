@@ -83,7 +83,7 @@ export interface Income {
 
 export type ExpenseInput = Omit<Expense, 'id'>;
 export type IncomeInput = Omit<Income, 'id'>;
-export type EntryType = 'expense' | 'income';
+export type EntryType = 'expense' | 'income' | 'savings';
 export type TypeFilter = 'all' | EntryType;
 
 export interface Filters {
@@ -97,7 +97,40 @@ export interface DrawerState {
   type: EntryType;
   /** Set when editing an existing entry, null for a new one. */
   id: number | null;
+  /** Preselected savings account when opening the drawer for a new deposit or withdrawal. */
+  accountId?: number | null;
+  /** Preselected direction when opening the drawer for a new savings entry. Defaults to 'deposit'. */
+  direction?: SavingsDirection;
 }
+
+export type SavingsDirection = 'deposit' | 'withdraw';
+
+/** A savings account the user tracks, with an optional goal. */
+export interface SavingsAccount {
+  id: number;
+  name: string;
+  /** The bank or institution holding the money. */
+  bank: string;
+  /** True for a high-yield savings account. */
+  hysa: boolean;
+  openingBalance: number;
+  goalAmount: number | null;
+  /** Opening balance plus every deposit into this account, computed by the backend. */
+  balance: number;
+}
+
+export type SavingsAccountInput = Omit<SavingsAccount, 'id' | 'balance'>;
+
+/** A deposit into, or withdrawal from, a savings account. A positive amount deposits; a negative amount withdraws. */
+export interface SavingsDeposit {
+  id: number;
+  date: string;
+  accountId: number;
+  amount: number;
+  note: string;
+}
+
+export type SavingsDepositInput = Omit<SavingsDeposit, 'id'>;
 
 
 export const INCOME_SOURCES = ['Paycheck', 'Tutoring', 'Interest – HYSA', 'Other'];

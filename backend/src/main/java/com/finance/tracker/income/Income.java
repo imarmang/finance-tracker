@@ -32,6 +32,12 @@ public record Income(
         return fed.add(ss).add(medicare).add(stateTax).add(sdi);
     }
 
+    /** Take-home pay after taxes and deductions. */
+    @JsonIgnore
+    public BigDecimal net() {
+        return gross.subtract(taxes());
+    }
+
     /** Taxes cannot be more than the gross pay. Skipped when a field is missing, since @NotNull reports that. */
     @AssertTrue(message = "Taxes and deductions cannot be more than the gross amount")
     @JsonIgnore
