@@ -1,6 +1,8 @@
 # finance-tracker
 
-A finance tracking application with a Java/Spring Boot backend and an Angular frontend.
+A finance tracking application with a Java/Spring Boot backend and an Angular frontend. Tracks
+expenses, income, budgets, payment method rewards, and savings accounts (deposits, goals, and how
+much of each month's profit has not yet been moved into savings).
 
 ## Tech Stack
 
