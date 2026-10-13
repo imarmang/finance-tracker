@@ -97,9 +97,13 @@ export interface DrawerState {
   type: EntryType;
   /** Set when editing an existing entry, null for a new one. */
   id: number | null;
-  /** Preselected savings account when opening the drawer for a new deposit. */
+  /** Preselected savings account when opening the drawer for a new deposit or withdrawal. */
   accountId?: number | null;
+  /** Preselected direction when opening the drawer for a new savings entry. Defaults to 'deposit'. */
+  direction?: SavingsDirection;
 }
+
+export type SavingsDirection = 'deposit' | 'withdraw';
 
 /** A savings account the user tracks, with an optional goal. */
 export interface SavingsAccount {
@@ -113,6 +117,7 @@ export interface SavingsAccount {
 
 export type SavingsAccountInput = Omit<SavingsAccount, 'id' | 'balance'>;
 
+/** A deposit into, or withdrawal from, a savings account. A positive amount deposits; a negative amount withdraws. */
 export interface SavingsDeposit {
   id: number;
   date: string;

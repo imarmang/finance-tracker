@@ -387,6 +387,25 @@
           }
         </fieldset>
 
+        <div class="seg" role="group" aria-label="Deposit or withdraw" style="margin-bottom: 16px">
+          <button
+            type="button"
+            [attr.aria-pressed]="savingsForm.controls.direction.value === 'deposit'"
+            [disabled]="editing()"
+            (click)="setDirection('deposit')"
+          >
+            Deposit
+          </button>
+          <button
+            type="button"
+            [attr.aria-pressed]="savingsForm.controls.direction.value === 'withdraw'"
+            [disabled]="editing()"
+            (click)="setDirection('withdraw')"
+          >
+            Withdraw
+          </button>
+        </div>
+
         <div class="field amount">
           <label for="fSavingsAmount">Amount</label>
           <div class="money-in">
@@ -398,11 +417,13 @@
               autocomplete="off"
               placeholder="0.00"
               (input)="onAmountInput($event, savingsForm.controls.amount)"
-              [attr.aria-invalid]="invalid(savingsForm.controls.amount) || null"
+              [attr.aria-invalid]="invalid(savingsForm.controls.amount) || withdrawalExceedsBalance() || null"
             />
           </div>
           @if (invalid(savingsForm.controls.amount)) {
             <p class="err">Enter an amount more than $0.</p>
+          } @else if (withdrawalExceedsBalance()) {
+            <p class="err">That account doesn't have that much to withdraw.</p>
           }
         </div>
 
@@ -441,8 +462,16 @@
 
       <div class="dfoot" id="dFoot">
         <div class="grow">
-          <button type="submit" class="btn primary" [disabled]="noSavingsAccounts()">
-            {{ editing() ? 'Save changes' : 'Save deposit' }}
+          <button
+            type="submit"
+            class="btn primary"
+            [disabled]="noSavingsAccounts() || withdrawalExceedsBalance()"
+          >
+            {{
+              editing() ? 'Save changes'
+              : savingsForm.controls.direction.value === 'withdraw' ? 'Save withdrawal'
+              : 'Save deposit'
+            }}
           </button>
         </div>
         @if (editing()) {

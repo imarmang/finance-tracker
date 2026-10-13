@@ -1,5 +1,6 @@
 package com.finance.tracker.savings;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -29,12 +30,18 @@ public class SavingsDepositService {
     }
 
     public SavingsDeposit create(SavingsDeposit deposit) {
-        requireAccount(deposit.accountId());
+        SavingsAccount account = requireAccount(deposit.accountId());
+        requireSufficientBalance(account, account.balance(), deposit.amount());
         return repository.save(deposit);
     }
 
     public SavingsDeposit update(Long id, SavingsDeposit deposit) {
-        requireAccount(deposit.accountId());
+        SavingsDeposit existing = get(id);
+        SavingsAccount account = requireAccount(deposit.accountId());
+        BigDecimal balanceBeforeThisOne = account.id().equals(existing.accountId())
+                ? account.balance().subtract(existing.amount())
+                : account.balance();
+        requireSufficientBalance(account, balanceBeforeThisOne, deposit.amount());
         return repository.update(id, deposit).orElseThrow(() -> new SavingsDepositNotFoundException(id));
     }
 
@@ -45,9 +52,14 @@ public class SavingsDepositService {
     }
 
     /** A deposit must point at a real account, since the FK would otherwise surface as an opaque database error. */
-    private void requireAccount(Long accountId) {
-        if (accounts.findById(accountId).isEmpty()) {
-            throw new SavingsAccountNotFoundException(accountId);
+    private SavingsAccount requireAccount(Long accountId) {
+        return accounts.findById(accountId).orElseThrow(() -> new SavingsAccountNotFoundException(accountId));
+    }
+
+    /** A withdrawal (a negative amount) is refused if it would take the account below a zero balance. */
+    private void requireSufficientBalance(SavingsAccount account, BigDecimal balanceBeforeThisOne, BigDecimal amount) {
+        if (balanceBeforeThisOne.add(amount).signum() < 0) {
+            throw new InsufficientSavingsBalanceException(account.name());
         }
     }
 }

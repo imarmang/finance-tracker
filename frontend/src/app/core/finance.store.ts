@@ -14,6 +14,7 @@ import {
   SavingsAccountInput,
   SavingsDeposit,
   SavingsDepositInput,
+  SavingsDirection,
 } from './model';
 import { daysIn, MONTHS, pad, TODAY, TODAY_MONTH } from './format';
 import { multFor, summarize } from './finance';
@@ -112,8 +113,13 @@ export class FinanceStore {
     }
   }
 
-  openDrawer(type: EntryType = 'expense', id: number | null = null, accountId: number | null = null): void {
-    this.drawer.set({ type, id, accountId });
+  openDrawer(
+    type: EntryType = 'expense',
+    id: number | null = null,
+    accountId: number | null = null,
+    direction: SavingsDirection = 'deposit',
+  ): void {
+    this.drawer.set({ type, id, accountId, direction });
   }
 
   closeDrawer(): void {

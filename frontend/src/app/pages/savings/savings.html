@@ -68,7 +68,7 @@
           />
         </div>
 
-        <p class="hint" style="margin-top: 12px">{{ monthLabel(store.month()) }}'s deposits</p>
+        <p class="hint" style="margin-top: 12px">{{ monthLabel(store.month()) }}'s activity</p>
         @if (depositsFor(a.id).length) {
           @for (d of depositsFor(a.id); track d.id) {
             <div class="rule">
@@ -78,12 +78,12 @@
                 style="flex: 1; text-align: left"
                 (click)="editDeposit(d.id)"
               >
-                {{ shortDate(d.date) }} · {{ money(d.amount) }}{{ d.note ? ' · ' + d.note : '' }}
+                {{ shortDate(d.date) }} · {{ depositLabel(d) }}{{ d.note ? ' · ' + d.note : '' }}
               </button>
               <button
                 class="x"
                 type="button"
-                [attr.aria-label]="'Delete deposit of ' + money(d.amount)"
+                [attr.aria-label]="'Delete entry of ' + money(d.amount)"
                 (click)="removeDeposit(d)"
               >
                 ×
@@ -94,9 +94,14 @@
           <p class="hint" style="margin: 0">Nothing yet.</p>
         }
 
-        <button class="btn primary" type="button" style="margin-top: 12px" (click)="openDeposit(a.id)">
-          + Add deposit
-        </button>
+        <div class="rule" style="margin-top: 12px; gap: 10px">
+          <button class="btn primary" type="button" style="flex: 1" (click)="openDeposit(a.id)">
+            + Add deposit
+          </button>
+          <button class="btn" type="button" style="flex: 1" (click)="openWithdrawal(a.id)">
+            − Withdraw
+          </button>
+        </div>
       </div>
     }
 

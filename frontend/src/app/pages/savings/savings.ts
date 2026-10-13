@@ -65,11 +65,21 @@ export class Savings {
   }
 
   protected openDeposit(accountId: number): void {
-    this.store.openDrawer('savings', null, accountId);
+    this.store.openDrawer('savings', null, accountId, 'deposit');
+  }
+
+  protected openWithdrawal(accountId: number): void {
+    this.store.openDrawer('savings', null, accountId, 'withdraw');
   }
 
   protected editDeposit(id: number): void {
     this.store.openDrawer('savings', id);
+  }
+
+  protected depositLabel(deposit: SavingsDeposit): string {
+    return deposit.amount < 0
+      ? `Withdrew ${this.money(-deposit.amount)}`
+      : `Deposited ${this.money(deposit.amount)}`;
   }
 
   protected async removeDeposit(deposit: SavingsDeposit): Promise<void> {
