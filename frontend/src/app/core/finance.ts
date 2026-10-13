@@ -1,4 +1,13 @@
-import { Category, CategoryGroup, Expense, Income, PaymentMethod } from './model';
+import {
+  Category,
+  CategoryGroup,
+  Expense,
+  Income,
+  PaymentMethod,
+  SavingsAccount,
+  SavingsDeposit,
+  SavingsDirection,
+} from './model';
 import { money, r2 } from './format';
 
 export function sum(values: number[]): number {
@@ -125,6 +134,41 @@ export function transactionsOf(s: MonthSummary): TxView[] {
   return [...expenses, ...income].sort((a, b) =>
     a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id,
   );
+}
+
+/** One row in the savings activity ledger: a deposit into, or withdrawal from, any account. */
+export interface SavingsLedgerView {
+  id: number;
+  date: string;
+  accountId: number;
+  account: string;
+  bank: string;
+  direction: SavingsDirection;
+  amount: number;
+  note: string;
+}
+
+/** Every deposit and withdrawal across every account, newest first. */
+export function savingsLedgerOf(
+  deposits: SavingsDeposit[],
+  accounts: SavingsAccount[],
+): SavingsLedgerView[] {
+  const byId = new Map(accounts.map((a) => [a.id, a]));
+  return deposits
+    .map((d): SavingsLedgerView => {
+      const account = byId.get(d.accountId);
+      return {
+        id: d.id,
+        date: d.date,
+        accountId: d.accountId,
+        account: account?.name ?? 'Deleted account',
+        bank: account?.bank ?? '',
+        direction: d.amount < 0 ? 'withdraw' : 'deposit',
+        amount: Math.abs(d.amount),
+        note: d.note,
+      };
+    })
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
 }
 
 export interface BudgetRow {

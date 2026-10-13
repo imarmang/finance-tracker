@@ -744,6 +744,13 @@ p {
 .tx .a.in {
   color: var(--good-ink);
 }
+.tx .a.out {
+  color: var(--crit-ink);
+}
+.tx.sv,
+.txhead.sv {
+  grid-template-columns: 64px minmax(0, 1fr) minmax(0, 120px) 110px;
+}
 .txhead {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) minmax(0, 150px) 70px 110px;
@@ -864,6 +871,30 @@ p {
   justify-content: space-between;
   gap: 8px;
   align-items: baseline;
+}
+.cc.add {
+  border-style: dashed;
+  border-color: var(--line-2);
+  background: var(--surface-2);
+}
+.cc.add h2 {
+  justify-content: flex-start;
+  align-items: center;
+  color: var(--accent);
+}
+.add-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
 }
 .cc .kv {
   display: flex;
@@ -1326,7 +1357,8 @@ details[open] > summary::before {
   .txhead {
     display: none;
   }
-  .tx {
+  .tx,
+  .tx.sv {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: 'v a' 'cd p';
     gap: 2px 12px;

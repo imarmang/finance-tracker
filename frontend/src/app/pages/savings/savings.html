@@ -127,8 +127,8 @@
       </div>
     }
 
-    <div class="card cc">
-      <h2>Add a savings account</h2>
+    <div class="card cc add">
+      <h2><span class="add-icon" aria-hidden="true">+</span> Add a savings account</h2>
       <div class="rule">
         <input
           type="text"
@@ -186,5 +186,79 @@
         Add savings account
       </button>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>All savings activity</h2>
+        <p class="sub">Every deposit and withdrawal, across every account.</p>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input
+        type="search"
+        placeholder="Search account or note"
+        aria-label="Search savings activity"
+        [value]="ledgerQuery()"
+        (input)="ledgerQuery.set(textOf($event))"
+      />
+
+      <div class="seg" role="group" aria-label="Direction">
+        @for (d of directionOptions; track d.value) {
+          <button
+            type="button"
+            [attr.aria-pressed]="ledgerDirection() === d.value"
+            (click)="ledgerDirection.set(d.value)"
+          >
+            {{ d.label }}
+          </button>
+        }
+      </div>
+
+      <select aria-label="Account" (change)="setLedgerAccount($event)">
+        <option value="">All accounts</option>
+        @for (a of store.savingsAccounts(); track a.id) {
+          <option [value]="a.id" [selected]="ledgerAccountId() === a.id">{{ a.name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (ledger().length) {
+      <div class="txhead sv">
+        <span>Date</span><span>Account</span><span>Bank</span><span>Amount</span>
+      </div>
+      @for (entry of ledger(); track entry.id) {
+        <button
+          type="button"
+          class="tx sv"
+          [attr.aria-label]="'Edit entry for ' + entry.account + ', ' + money(entry.amount)"
+          (click)="editDeposit(entry.id)"
+        >
+          <span class="d">{{ shortDate(entry.date) }}</span>
+          <span class="v">
+            {{ entry.account }}
+            <span class="c">
+              {{ entry.direction === 'deposit' ? 'Deposit' : 'Withdrawal'
+              }}{{ entry.note ? ' · ' + entry.note : '' }}
+            </span>
+          </span>
+          <span class="cd">{{ entry.bank }}</span>
+          <span class="a" [class.in]="entry.direction === 'deposit'" [class.out]="entry.direction === 'withdraw'">
+            {{ entry.direction === 'deposit' ? '+' : '−' }}{{ money(entry.amount) }}
+          </span>
+        </button>
+      }
+      <div class="tx-foot">
+        <span>{{ ledger().length }} entries</span>
+        <span class="mono">{{ ledgerFooter() }}</span>
+      </div>
+    } @else {
+      <div class="empty">
+        <h3>No activity yet</h3>
+        <p>Deposits and withdrawals across your accounts will show up here.</p>
+      </div>
+    }
   </div>
 </div>

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FinanceStore } from '../../core/finance.store';
 import { ToastService } from '../../core/feedback.service';
+import { savingsLedgerOf, sum } from '../../core/finance';
 import {
   eventChecked,
   eventValue,
@@ -12,7 +13,12 @@ import {
   parseNumber,
   shortDate,
 } from '../../core/format';
-import { SavingsAccount, SavingsAccountInput, SavingsDeposit } from '../../core/model';
+import {
+  SavingsAccount,
+  SavingsAccountInput,
+  SavingsDeposit,
+  SavingsDirection,
+} from '../../core/model';
 
 @Component({
   selector: 'app-savings',
@@ -28,6 +34,19 @@ export class Savings {
   protected readonly newHysa = signal(false);
   protected readonly newOpening = signal(0);
   protected readonly newGoal = signal<number | null>(null);
+
+  protected readonly ledgerQuery = signal('');
+  protected readonly ledgerDirection = signal<'all' | SavingsDirection>('all');
+  protected readonly ledgerAccountId = signal<number | null>(null);
+
+  protected readonly directionOptions: ReadonlyArray<{
+    value: 'all' | SavingsDirection;
+    label: string;
+  }> = [
+    { value: 'all', label: 'All' },
+    { value: 'deposit', label: 'Deposits' },
+    { value: 'withdraw', label: 'Withdrawals' },
+  ];
 
   protected readonly money = money;
   protected readonly money0 = money0;
@@ -60,6 +79,34 @@ export class Savings {
     return (
       this.store.savingsSummary()?.savedByAccount.find((s) => s.accountId === accountId)?.amount ?? 0
     );
+  }
+
+  /** Every deposit and withdrawal across every account, newest first, filtered by the ledger controls. */
+  protected readonly ledger = computed(() => {
+    const q = this.ledgerQuery().trim().toLowerCase();
+    const direction = this.ledgerDirection();
+    const accountId = this.ledgerAccountId();
+    return savingsLedgerOf(this.store.savingsDeposits(), this.store.savingsAccounts()).filter((r) => {
+      if (direction !== 'all' && r.direction !== direction) return false;
+      if (accountId !== null && r.accountId !== accountId) return false;
+      if (q && `${r.account} ${r.note}`.toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  });
+
+  protected readonly ledgerFooter = computed(() => {
+    const rows = this.ledger();
+    const deposits = rows.filter((r) => r.direction === 'deposit');
+    const withdrawals = rows.filter((r) => r.direction === 'withdraw');
+    const parts: string[] = [];
+    if (deposits.length) parts.push(`+${this.money(sum(deposits.map((r) => r.amount)))}`);
+    if (withdrawals.length) parts.push(`−${this.money(sum(withdrawals.map((r) => r.amount)))}`);
+    return parts.join('   ');
+  });
+
+  protected setLedgerAccount(event: Event): void {
+    const value = eventValue(event);
+    this.ledgerAccountId.set(value ? Number(value) : null);
   }
 
   protected goalPct(account: SavingsAccount): number {
