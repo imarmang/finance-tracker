@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FinanceStore } from '../../core/finance.store';
 import { ToastService } from '../../core/feedback.service';
 import {
+  eventChecked,
   eventValue,
   money,
   money0,
@@ -23,6 +24,8 @@ export class Savings {
   private readonly toast = inject(ToastService);
 
   protected readonly newName = signal('');
+  protected readonly newBank = signal('');
+  protected readonly newHysa = signal(false);
   protected readonly newOpening = signal(0);
   protected readonly newGoal = signal<number | null>(null);
 
@@ -106,9 +109,16 @@ export class Savings {
       this.toast.show('Enter a name for the savings account.');
       return;
     }
+    const bank = this.newBank().trim();
+    if (!bank) {
+      this.toast.show('Enter the bank that holds this account.');
+      return;
+    }
     try {
       await this.store.addSavingsAccount({
         name,
+        bank,
+        hysa: this.newHysa(),
         openingBalance: this.newOpening(),
         goalAmount: this.newGoal(),
       });
@@ -117,6 +127,8 @@ export class Savings {
       return;
     }
     this.newName.set('');
+    this.newBank.set('');
+    this.newHysa.set(false);
     this.newOpening.set(0);
     this.newGoal.set(null);
   }
@@ -148,6 +160,15 @@ export class Savings {
     if (name) void this.update(account, { name });
   }
 
+  protected setBank(account: SavingsAccount, event: Event): void {
+    const bank = eventValue(event).trim();
+    if (bank) void this.update(account, { bank });
+  }
+
+  protected setHysa(account: SavingsAccount, event: Event): void {
+    void this.update(account, { hysa: eventChecked(event) });
+  }
+
   protected setOpeningBalance(account: SavingsAccount, event: Event): void {
     void this.update(account, { openingBalance: this.numberOf(event) });
   }
@@ -165,6 +186,10 @@ export class Savings {
     return parseNumber(eventValue(event));
   }
 
+  protected checkedOf(event: Event): boolean {
+    return eventChecked(event);
+  }
+
   private async update(account: SavingsAccount, patch: Partial<SavingsAccountInput>): Promise<void> {
     try {
       await this.store.updateSavingsAccount(account.id, { ...this.inputOf(account), ...patch });
@@ -174,7 +199,13 @@ export class Savings {
   }
 
   private inputOf(a: SavingsAccount): SavingsAccountInput {
-    return { name: a.name, openingBalance: a.openingBalance, goalAmount: a.goalAmount };
+    return {
+      name: a.name,
+      bank: a.bank,
+      hysa: a.hysa,
+      openingBalance: a.openingBalance,
+      goalAmount: a.goalAmount,
+    };
   }
 
   private inUseMessage(name: string): string {

@@ -28,7 +28,7 @@ class SavingsAccountServiceTest {
     @Test
     void deletingAnAccountWithDepositsIsRefused() {
         SavingsAccountService service = new SavingsAccountService(accounts, deposits);
-        SavingsAccount account = new SavingsAccount(1L, "Emergency fund", BigDecimal.ZERO, null, BigDecimal.ZERO);
+        SavingsAccount account = new SavingsAccount(1L, "Emergency fund", "Ally", true, BigDecimal.ZERO, null, BigDecimal.ZERO);
         when(accounts.findById(1L)).thenReturn(Optional.of(account));
         when(deposits.existsByAccount(1L)).thenReturn(true);
 
@@ -42,7 +42,7 @@ class SavingsAccountServiceTest {
     @Test
     void deletingAnAccountWithNoDepositsSucceeds() {
         SavingsAccountService service = new SavingsAccountService(accounts, deposits);
-        SavingsAccount account = new SavingsAccount(1L, "Emergency fund", BigDecimal.ZERO, null, BigDecimal.ZERO);
+        SavingsAccount account = new SavingsAccount(1L, "Emergency fund", "Ally", true, BigDecimal.ZERO, null, BigDecimal.ZERO);
         when(accounts.findById(1L)).thenReturn(Optional.of(account));
         when(deposits.existsByAccount(1L)).thenReturn(false);
         when(accounts.deleteById(1L)).thenReturn(true);

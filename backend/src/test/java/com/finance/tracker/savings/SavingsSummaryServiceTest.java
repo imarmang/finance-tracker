@@ -63,8 +63,8 @@ class SavingsSummaryServiceTest {
         when(incomeService.findByMonth(MONTH)).thenReturn(List.of(paycheck(new BigDecimal("2200.00"))));
         when(expenseService.findByMonth(MONTH)).thenReturn(List.of());
         when(accounts.findAll()).thenReturn(List.of(
-                new SavingsAccount(10L, "Emergency fund", BigDecimal.ZERO, null, BigDecimal.ZERO),
-                new SavingsAccount(20L, "Vacation", BigDecimal.ZERO, null, BigDecimal.ZERO)));
+                new SavingsAccount(10L, "Emergency fund", "Ally", true, BigDecimal.ZERO, null, BigDecimal.ZERO),
+                new SavingsAccount(20L, "Vacation", "Chase", false, BigDecimal.ZERO, null, BigDecimal.ZERO)));
         when(deposits.findByMonth(MONTH)).thenReturn(List.of(
                 deposit(10L, new BigDecimal("500.00")),
                 deposit(20L, new BigDecimal("305.00"))));

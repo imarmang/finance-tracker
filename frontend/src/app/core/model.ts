@@ -109,6 +109,10 @@ export type SavingsDirection = 'deposit' | 'withdraw';
 export interface SavingsAccount {
   id: number;
   name: string;
+  /** The bank or institution holding the money. */
+  bank: string;
+  /** True for a high-yield savings account. */
+  hysa: boolean;
   openingBalance: number;
   goalAmount: number | null;
   /** Opening balance plus every deposit into this account, computed by the backend. */

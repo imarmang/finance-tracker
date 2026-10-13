@@ -27,7 +27,7 @@ class SavingsDepositServiceTest {
     private SavingsDepositService service;
 
     private static SavingsAccount accountWithBalance(BigDecimal balance) {
-        return new SavingsAccount(1L, "Emergency fund", BigDecimal.ZERO, null, balance);
+        return new SavingsAccount(1L, "Emergency fund", "Ally", true, BigDecimal.ZERO, null, balance);
     }
 
     private void setUp() {

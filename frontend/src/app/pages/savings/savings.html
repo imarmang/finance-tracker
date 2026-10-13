@@ -10,6 +10,9 @@
             style="border: none; background: transparent; font: inherit; color: inherit; width: auto; max-width: 170px"
             (change)="renameAccount(a, $event)"
           />
+          <span class="faint" style="font-weight: 400; font-size: 13px">
+            {{ a.bank }}{{ a.hysa ? ' · HYSA' : '' }}
+          </span>
           <button
             class="xbtn"
             type="button"
@@ -44,6 +47,25 @@
           </div>
         }
 
+        <div class="rule">
+          <span style="flex: 1">Bank</span>
+          <input
+            type="text"
+            [value]="a.bank"
+            [attr.aria-label]="'Bank for ' + a.name"
+            (change)="setBank(a, $event)"
+          />
+        </div>
+        <div class="rule">
+          <span style="flex: 1">High-yield savings account</span>
+          <input
+            type="checkbox"
+            style="width: auto"
+            [checked]="a.hysa"
+            [attr.aria-label]="'High-yield savings account for ' + a.name"
+            (change)="setHysa(a, $event)"
+          />
+        </div>
         <div class="rule">
           <span style="flex: 1">Opening balance</span>
           <input
@@ -115,6 +137,26 @@
           style="flex: 1"
           [value]="newName()"
           (input)="newName.set(textOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <input
+          type="text"
+          placeholder="Bank, e.g. Ally"
+          aria-label="New account bank"
+          style="flex: 1"
+          [value]="newBank()"
+          (input)="newBank.set(textOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <span style="flex: 1">High-yield savings account</span>
+        <input
+          type="checkbox"
+          style="width: auto"
+          aria-label="New account is a high-yield savings account"
+          [checked]="newHysa()"
+          (change)="newHysa.set(checkedOf($event))"
         />
       </div>
       <div class="rule">

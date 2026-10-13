@@ -12,6 +12,10 @@ import jakarta.validation.constraints.Size;
 public record SavingsAccount(
         Long id,
         @NotBlank @Size(max = 60) String name,
+        /** The bank or institution holding the money. */
+        @NotBlank @Size(max = 60) String bank,
+        /** True for a high-yield savings account. */
+        boolean hysa,
         @NotNull @DecimalMin("0") @Digits(integer = 10, fraction = 2) BigDecimal openingBalance,
         /** Optional; may be null when the account has no savings goal. */
         @DecimalMin("0") @Digits(integer = 10, fraction = 2) BigDecimal goalAmount,

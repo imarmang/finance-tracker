@@ -13,13 +13,14 @@ import org.springframework.stereotype.Repository;
 public class JdbcSavingsAccountRepository implements SavingsAccountRepository {
 
     private static final String SELECT = """
-            select a.id, a.name, a.opening_balance, a.goal_amount,
+            select a.id, a.name, a.bank, a.is_hysa, a.opening_balance, a.goal_amount,
                    a.opening_balance + coalesce(sum(d.amount), 0) as balance
             from savings_accounts a
             left join savings_deposits d on d.account_id = a.id
             """;
 
-    private static final String GROUP_BY = "group by a.id, a.name, a.opening_balance, a.goal_amount";
+    private static final String GROUP_BY =
+            "group by a.id, a.name, a.bank, a.is_hysa, a.opening_balance, a.goal_amount";
 
     private final JdbcClient jdbc;
 
@@ -44,14 +45,11 @@ public class JdbcSavingsAccountRepository implements SavingsAccountRepository {
 
     @Override
     public SavingsAccount save(SavingsAccount account) {
-        Long id = jdbc.sql("""
-                insert into savings_accounts (name, opening_balance, goal_amount)
-                values (:name, :openingBalance, :goalAmount)
+        Long id = bind("""
+                insert into savings_accounts (name, bank, is_hysa, opening_balance, goal_amount)
+                values (:name, :bank, :hysa, :openingBalance, :goalAmount)
                 returning id
-                """)
-                .param("name", account.name())
-                .param("openingBalance", account.openingBalance())
-                .param("goalAmount", account.goalAmount(), Types.NUMERIC)
+                """, account)
                 .query(Long.class)
                 .single();
         return findById(id).orElseThrow();
@@ -59,15 +57,13 @@ public class JdbcSavingsAccountRepository implements SavingsAccountRepository {
 
     @Override
     public Optional<SavingsAccount> update(Long id, SavingsAccount account) {
-        int rows = jdbc.sql("""
+        int rows = bind("""
                 update savings_accounts
-                set name = :name, opening_balance = :openingBalance, goal_amount = :goalAmount
+                set name = :name, bank = :bank, is_hysa = :hysa,
+                    opening_balance = :openingBalance, goal_amount = :goalAmount
                 where id = :id
-                """)
+                """, account)
                 .param("id", id)
-                .param("name", account.name())
-                .param("openingBalance", account.openingBalance())
-                .param("goalAmount", account.goalAmount(), Types.NUMERIC)
                 .update();
         return rows == 0 ? Optional.empty() : findById(id);
     }
@@ -79,10 +75,21 @@ public class JdbcSavingsAccountRepository implements SavingsAccountRepository {
                 .update() > 0;
     }
 
+    private JdbcClient.StatementSpec bind(String sql, SavingsAccount account) {
+        return jdbc.sql(sql)
+                .param("name", account.name())
+                .param("bank", account.bank())
+                .param("hysa", account.hysa())
+                .param("openingBalance", account.openingBalance())
+                .param("goalAmount", account.goalAmount(), Types.NUMERIC);
+    }
+
     private static SavingsAccount toAccount(ResultSet rs, int rowNum) throws SQLException {
         return new SavingsAccount(
                 rs.getLong("id"),
                 rs.getString("name"),
+                rs.getString("bank"),
+                rs.getBoolean("is_hysa"),
                 rs.getBigDecimal("opening_balance"),
                 rs.getBigDecimal("goal_amount"),
                 rs.getBigDecimal("balance"));
