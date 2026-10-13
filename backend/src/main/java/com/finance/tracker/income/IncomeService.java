@@ -1,5 +1,7 @@
 package com.finance.tracker.income;
 
+import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -16,6 +18,14 @@ public class IncomeService {
     /** Every income entry, newest first. */
     public List<Income> findAll() {
         return repository.findAll();
+    }
+
+    /** Income entries dated in the given month, newest first (newest id first on the same day). */
+    public List<Income> findByMonth(YearMonth month) {
+        return repository.findAll().stream()
+                .filter(i -> YearMonth.from(i.date()).equals(month))
+                .sorted(Comparator.comparing(Income::date).thenComparing(Income::id).reversed())
+                .toList();
     }
 
     public Income get(Long id) {
