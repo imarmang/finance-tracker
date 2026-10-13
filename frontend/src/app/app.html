@@ -1,0 +1,136 @@
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <i>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 17l5-5 4 4 7-8" />
+        </svg>
+      </i>
+      Spendings Tracker
+    </div>
+
+    <nav class="nav" aria-label="Main">
+      @for (item of nav; track item.path) {
+        <button
+          type="button"
+          (click)="go(item.path)"
+          [attr.aria-current]="currentPath() === item.path ? 'page' : null"
+        >
+          <ng-container *ngTemplateOutlet="icon; context: { $implicit: item.path }" />
+          <span>{{ item.label }}</span>
+        </button>
+      }
+    </nav>
+
+    <div class="side-foot">Database: PostgreSQL 17, running as the postgres:17 Docker image.</div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <h1>{{ title() }}</h1>
+      <div class="top-actions">
+        <div class="monthpick" role="group" aria-label="Month">
+          <button
+            type="button"
+            aria-label="Previous month"
+            [disabled]="monthIndex() <= 0"
+            (click)="store.shiftMonth(-1)"
+          >
+            ‹
+          </button>
+          <select aria-label="Choose month" (change)="monthFromEvent($event)">
+            @for (m of months; track m) {
+              <option [value]="m" [selected]="m === store.month()">{{ monthLabel(m) }}</option>
+            }
+          </select>
+          <button
+            type="button"
+            aria-label="Next month"
+            [disabled]="monthIndex() >= months.length - 1"
+            (click)="store.shiftMonth(1)"
+          >
+            ›
+          </button>
+        </div>
+        <button class="btn primary" type="button" (click)="store.openDrawer()">
+          + Add transaction
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Main">
+  @for (item of nav; track item.path) {
+    <button
+      type="button"
+      (click)="go(item.path)"
+      [attr.aria-current]="currentPath() === item.path ? 'page' : null"
+    >
+      <ng-container *ngTemplateOutlet="icon; context: { $implicit: item.path }" />
+      {{ item.short }}
+    </button>
+  }
+</nav>
+
+<button
+  class="btn primary fab"
+  type="button"
+  aria-label="Add transaction"
+  (click)="store.openDrawer()"
+>
+  + Add
+</button>
+
+<app-transaction-drawer />
+
+<div id="toast" role="status" aria-live="polite" [class.show]="!!toast.toast()">
+  <span>{{ toast.toast()?.message }}</span>
+  @if (toast.toast()?.actionLabel; as label) {
+    <button type="button" (click)="toast.run()">{{ label }}</button>
+  }
+</div>
+
+@if (tooltip.tip(); as tip) {
+  <div id="tip" [style.left.px]="tip.x" [style.top.px]="tip.y">
+    <b>{{ tip.title }}</b>
+    @for (line of tip.lines; track $index) {
+      <br /><span class="mono">{{ line }}</span>
+    }
+  </div>
+}
+
+<ng-template #icon let-key>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    @switch (key) {
+      @case ('dashboard') {
+        <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+      }
+      @case ('transactions') {
+        <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />
+      }
+      @case ('budget') {
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3.5" />
+      }
+      @case ('savings') {
+        <path d="M5 11a7 7 0 0 1 14 0v6a2 2 0 0 1-2 2h-1v-2h-8v2H7a2 2 0 0 1-2-2z" />
+        <circle cx="15.5" cy="10" r="1" fill="currentColor" stroke="none" />
+      }
+      @case ('cards') {
+        <rect x="3" y="5.5" width="18" height="13" rx="2.5" />
+        <path d="M3 10h18M7 15h4" />
+      }
+    }
+  </svg>
+</ng-template>

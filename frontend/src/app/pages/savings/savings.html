@@ -1,0 +1,264 @@
+<div class="grid">
+  <div class="cardgrid">
+    @for (a of store.savingsAccounts(); track a.id) {
+      <div class="card cc">
+        <h2>
+          <input
+            type="text"
+            [value]="a.name"
+            aria-label="Account name"
+            style="border: none; background: transparent; font: inherit; color: inherit; width: auto; max-width: 170px"
+            (change)="renameAccount(a, $event)"
+          />
+          <span class="faint" style="font-weight: 400; font-size: 13px">
+            {{ a.bank }}{{ a.hysa ? ' · HYSA' : '' }}
+          </span>
+          <button
+            class="xbtn"
+            type="button"
+            [attr.aria-label]="'Remove ' + a.name"
+            (click)="removeAccount(a)"
+          >
+            ×
+          </button>
+        </h2>
+
+        <div class="kv">
+          <div>
+            <div class="k">Balance</div>
+            <div class="v">{{ money(a.balance) }}</div>
+          </div>
+          <div>
+            <div class="k">Saved in {{ monthShort(store.month()) }}</div>
+            <div class="v">{{ money(depositTotalFor(a.id)) }}</div>
+          </div>
+        </div>
+
+        @if (a.goalAmount) {
+          <div class="brow" style="grid-template-columns: minmax(0, 1fr) auto">
+            <div
+              class="track"
+              role="img"
+              [attr.aria-label]="'Goal progress: ' + money(a.balance) + ' of ' + money(a.goalAmount)"
+            >
+              <i [style.width.%]="goalPct(a)"></i>
+            </div>
+            <span class="amt">{{ money0(a.balance) }} / {{ money0(a.goalAmount) }}</span>
+          </div>
+        }
+
+        <div class="rule">
+          <span style="flex: 1">Bank</span>
+          <input
+            type="text"
+            [value]="a.bank"
+            [attr.aria-label]="'Bank for ' + a.name"
+            (change)="setBank(a, $event)"
+          />
+        </div>
+        <div class="rule">
+          <span style="flex: 1">High-yield savings account</span>
+          <input
+            type="checkbox"
+            style="width: auto"
+            [checked]="a.hysa"
+            [attr.aria-label]="'High-yield savings account for ' + a.name"
+            (change)="setHysa(a, $event)"
+          />
+        </div>
+        <div class="rule">
+          <span style="flex: 1">Opening balance</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            [value]="a.openingBalance"
+            [attr.aria-label]="'Opening balance for ' + a.name"
+            (change)="setOpeningBalance(a, $event)"
+          />
+        </div>
+        <div class="rule">
+          <span style="flex: 1">Savings goal</span>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            [value]="a.goalAmount ?? ''"
+            placeholder="None"
+            [attr.aria-label]="'Savings goal for ' + a.name"
+            (change)="setGoal(a, $event)"
+          />
+        </div>
+
+        <p class="hint" style="margin-top: 12px">{{ monthLabel(store.month()) }}'s activity</p>
+        @if (depositsFor(a.id).length) {
+          @for (d of depositsFor(a.id); track d.id) {
+            <div class="rule">
+              <button
+                type="button"
+                class="link"
+                style="flex: 1; text-align: left"
+                (click)="editDeposit(d.id)"
+              >
+                {{ shortDate(d.date) }} · {{ depositLabel(d) }}{{ d.note ? ' · ' + d.note : '' }}
+              </button>
+              <button
+                class="x"
+                type="button"
+                [attr.aria-label]="'Delete entry of ' + money(d.amount)"
+                (click)="removeDeposit(d)"
+              >
+                ×
+              </button>
+            </div>
+          }
+        } @else {
+          <p class="hint" style="margin: 0">Nothing yet.</p>
+        }
+
+        <div class="rule" style="margin-top: 12px; gap: 10px">
+          <button class="btn primary" type="button" style="flex: 1" (click)="openDeposit(a.id)">
+            + Add deposit
+          </button>
+          <button class="btn" type="button" style="flex: 1" (click)="openWithdrawal(a.id)">
+            − Withdraw
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="card cc add">
+      <h2><span class="add-icon" aria-hidden="true">+</span> Add a savings account</h2>
+      <div class="rule">
+        <input
+          type="text"
+          placeholder="Name, e.g. Emergency fund"
+          aria-label="New account name"
+          style="flex: 1"
+          [value]="newName()"
+          (input)="newName.set(textOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <input
+          type="text"
+          placeholder="Bank, e.g. Ally"
+          aria-label="New account bank"
+          style="flex: 1"
+          [value]="newBank()"
+          (input)="newBank.set(textOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <span style="flex: 1">High-yield savings account</span>
+        <input
+          type="checkbox"
+          style="width: auto"
+          aria-label="New account is a high-yield savings account"
+          [checked]="newHysa()"
+          (change)="newHysa.set(checkedOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <span style="flex: 1">Opening balance</span>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          aria-label="New account opening balance"
+          [value]="newOpening()"
+          (change)="newOpening.set(numberOf($event))"
+        />
+      </div>
+      <div class="rule">
+        <span style="flex: 1">Savings goal</span>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="None"
+          aria-label="New account savings goal"
+          [value]="newGoal() ?? ''"
+          (change)="newGoal.set(textOf($event).trim() ? numberOf($event) : null)"
+        />
+      </div>
+      <button class="btn primary" type="button" style="margin-top: 12px" (click)="addAccount()">
+        Add savings account
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>All savings activity</h2>
+        <p class="sub">Every deposit and withdrawal, across every account.</p>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input
+        type="search"
+        placeholder="Search account or note"
+        aria-label="Search savings activity"
+        [value]="ledgerQuery()"
+        (input)="ledgerQuery.set(textOf($event))"
+      />
+
+      <div class="seg" role="group" aria-label="Direction">
+        @for (d of directionOptions; track d.value) {
+          <button
+            type="button"
+            [attr.aria-pressed]="ledgerDirection() === d.value"
+            (click)="ledgerDirection.set(d.value)"
+          >
+            {{ d.label }}
+          </button>
+        }
+      </div>
+
+      <select aria-label="Account" (change)="setLedgerAccount($event)">
+        <option value="">All accounts</option>
+        @for (a of store.savingsAccounts(); track a.id) {
+          <option [value]="a.id" [selected]="ledgerAccountId() === a.id">{{ a.name }}</option>
+        }
+      </select>
+    </div>
+
+    @if (ledger().length) {
+      <div class="txhead sv">
+        <span>Date</span><span>Account</span><span>Bank</span><span>Amount</span>
+      </div>
+      @for (entry of ledger(); track entry.id) {
+        <button
+          type="button"
+          class="tx sv"
+          [attr.aria-label]="'Edit entry for ' + entry.account + ', ' + money(entry.amount)"
+          (click)="editDeposit(entry.id)"
+        >
+          <span class="d">{{ shortDate(entry.date) }}</span>
+          <span class="v">
+            {{ entry.account }}
+            <span class="c">
+              {{ entry.direction === 'deposit' ? 'Deposit' : 'Withdrawal'
+              }}{{ entry.note ? ' · ' + entry.note : '' }}
+            </span>
+          </span>
+          <span class="cd">{{ entry.bank }}</span>
+          <span class="a" [class.in]="entry.direction === 'deposit'" [class.out]="entry.direction === 'withdraw'">
+            {{ entry.direction === 'deposit' ? '+' : '−' }}{{ money(entry.amount) }}
+          </span>
+        </button>
+      }
+      <div class="tx-foot">
+        <span>{{ ledger().length }} entries</span>
+        <span class="mono">{{ ledgerFooter() }}</span>
+      </div>
+    } @else {
+      <div class="empty">
+        <h3>No activity yet</h3>
+        <p>Deposits and withdrawals across your accounts will show up here.</p>
+      </div>
+    }
+  </div>
+</div>
