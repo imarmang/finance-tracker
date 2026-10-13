@@ -18,6 +18,7 @@ export const NAV: NavItem[] = [
   { path: 'dashboard', label: 'Dashboard', short: 'Dashboard' },
   { path: 'transactions', label: 'Transactions', short: 'Transactions' },
   { path: 'budget', label: 'Budget', short: 'Budget' },
+  { path: 'savings', label: 'Savings', short: 'Savings' },
   { path: 'cards', label: 'Payment methods', short: 'Payments' },
 ];
 
@@ -58,6 +59,9 @@ export class App {
     this.store.loadIncome();
     this.store.loadCards();
     this.store.loadBudgets();
+    this.store.loadSavingsAccounts();
+    this.store.loadSavingsDeposits();
+    this.store.loadSavingsSummary();
   }
 
   protected go(path: string): void {

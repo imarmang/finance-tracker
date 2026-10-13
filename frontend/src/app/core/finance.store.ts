@@ -10,6 +10,10 @@ import {
   IncomeInput,
   PaymentMethod,
   PaymentMethodInput,
+  SavingsAccount,
+  SavingsAccountInput,
+  SavingsDeposit,
+  SavingsDepositInput,
 } from './model';
 import { daysIn, MONTHS, pad, TODAY, TODAY_MONTH } from './format';
 import { multFor, summarize } from './finance';
@@ -17,6 +21,9 @@ import { ExpenseApi } from './expense.api';
 import { IncomeApi } from './income.api';
 import { PaymentMethodApi } from './payment-method.api';
 import { BudgetApi, MonthBudgetDto } from './budget.api';
+import { SavingsAccountApi } from './savings-account.api';
+import { SavingsDepositApi } from './savings-deposit.api';
+import { SavingsSummaryApi, SavingsSummaryDto } from './savings-summary.api';
 import { ToastService } from './feedback.service';
 
 /**
@@ -29,6 +36,9 @@ export class FinanceStore {
   private readonly incomeApi = inject(IncomeApi);
   private readonly paymentApi = inject(PaymentMethodApi);
   private readonly budgetApi = inject(BudgetApi);
+  private readonly savingsAccountApi = inject(SavingsAccountApi);
+  private readonly savingsDepositApi = inject(SavingsDepositApi);
+  private readonly savingsSummaryApi = inject(SavingsSummaryApi);
   private readonly toast = inject(ToastService);
 
   readonly categories = CATEGORIES;
@@ -41,6 +51,11 @@ export class FinanceStore {
   readonly income = signal<Income[]>([]);
   readonly budgets = signal<Record<string, Record<string, number>>>({});
   readonly expected = signal<Record<string, number>>({});
+  readonly savingsAccounts = signal<SavingsAccount[]>([]);
+  /** True once the savings accounts have been fetched successfully. Tells an empty list apart from a failed load. */
+  readonly savingsAccountsLoaded = signal(false);
+  readonly savingsDeposits = signal<SavingsDeposit[]>([]);
+  readonly savingsSummary = signal<SavingsSummaryDto | null>(null);
   readonly cpp = signal(1);
   readonly month = signal(TODAY_MONTH);
   readonly filters = signal<Filters>({ q: '', type: 'all', cat: '', card: '' });
@@ -86,15 +101,19 @@ export class FinanceStore {
 
   setMonth(key: string): void {
     this.month.set(key);
+    this.loadSavingsSummary();
   }
 
   shiftMonth(step: number): void {
     const i = MONTHS.indexOf(this.month()) + step;
-    if (i >= 0 && i < MONTHS.length) this.month.set(MONTHS[i]);
+    if (i >= 0 && i < MONTHS.length) {
+      this.month.set(MONTHS[i]);
+      this.loadSavingsSummary();
+    }
   }
 
-  openDrawer(type: EntryType = 'expense', id: number | null = null): void {
-    this.drawer.set({ type, id });
+  openDrawer(type: EntryType = 'expense', id: number | null = null, accountId: number | null = null): void {
+    this.drawer.set({ type, id, accountId });
   }
 
   closeDrawer(): void {
@@ -308,5 +327,85 @@ export class FinanceStore {
       this.cards.update((list) => list.map((c) => (c.id === previous.id ? previous : c)));
       throw error;
     }
+  }
+
+  /** Fetches every savings account from the backend. Shows a toast if the request fails. */
+  async loadSavingsAccounts(): Promise<void> {
+    try {
+      this.savingsAccounts.set(await this.savingsAccountApi.list());
+      this.savingsAccountsLoaded.set(true);
+    } catch {
+      this.toast.show('Could not load savings accounts. Check that the backend is running.');
+    }
+  }
+
+  /** Fetches every savings deposit from the backend. Shows a toast if the request fails. */
+  async loadSavingsDeposits(): Promise<void> {
+    try {
+      this.savingsDeposits.set(await this.savingsDepositApi.list());
+    } catch {
+      this.toast.show('Could not load savings deposits. Check that the backend is running.');
+    }
+  }
+
+  /** Fetches the savings summary for the month currently shown. Shows a toast if the request fails. */
+  async loadSavingsSummary(): Promise<void> {
+    try {
+      this.savingsSummary.set(await this.savingsSummaryApi.get(this.month()));
+    } catch {
+      this.toast.show('Could not load the savings summary. Check that the backend is running.');
+    }
+  }
+
+  async addSavingsAccount(input: SavingsAccountInput): Promise<SavingsAccount> {
+    const created = await this.savingsAccountApi.create(input);
+    this.savingsAccounts.update((list) => [...list, created]);
+    return created;
+  }
+
+  async updateSavingsAccount(id: number, input: SavingsAccountInput): Promise<SavingsAccount> {
+    const updated = await this.savingsAccountApi.update(id, input);
+    this.savingsAccounts.update((list) => list.map((a) => (a.id === id ? updated : a)));
+    return updated;
+  }
+
+  async removeSavingsAccount(id: number): Promise<void> {
+    await this.savingsAccountApi.remove(id);
+    this.savingsAccounts.update((list) => list.filter((a) => a.id !== id));
+  }
+
+  /** Re-creates a removed savings account. The backend assigns it a new id. */
+  async restoreSavingsAccount(account: SavingsAccount): Promise<void> {
+    const { id: _id, balance: _balance, ...input } = account;
+    const created = await this.savingsAccountApi.create(input);
+    this.savingsAccounts.update((list) => [...list, created]);
+  }
+
+  async saveSavingsDeposit(input: SavingsDepositInput, id: number | null): Promise<SavingsDeposit> {
+    const saved =
+      id !== null
+        ? await this.savingsDepositApi.update(id, input)
+        : await this.savingsDepositApi.create(input);
+    this.savingsDeposits.update((list) =>
+      id !== null ? list.map((d) => (d.id === id ? saved : d)) : [...list, saved],
+    );
+    await Promise.all([this.loadSavingsAccounts(), this.loadSavingsSummary()]);
+    return saved;
+  }
+
+  async removeSavingsDeposit(id: number): Promise<SavingsDeposit | undefined> {
+    const removed = this.savingsDeposits().find((d) => d.id === id);
+    await this.savingsDepositApi.remove(id);
+    this.savingsDeposits.update((list) => list.filter((d) => d.id !== id));
+    await Promise.all([this.loadSavingsAccounts(), this.loadSavingsSummary()]);
+    return removed;
+  }
+
+  /** Re-creates a deleted savings deposit. The backend assigns it a new id. */
+  async restoreSavingsDeposit(deposit: SavingsDeposit): Promise<void> {
+    const { id: _id, ...input } = deposit;
+    const created = await this.savingsDepositApi.create(input);
+    this.savingsDeposits.update((list) => [...list, created]);
+    await Promise.all([this.loadSavingsAccounts(), this.loadSavingsSummary()]);
   }
 }
